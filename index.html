@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Studio Accogli</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@300;500;600&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: tvOS home — clock bar, centered wordmark, one reorderable grid of glass app tiles over a slow ambient glow. Single dark look by choice. */
+:root{
+  --bg:#07080c;
+  --bg-2:#10121a;
+  --fg:#f3f4f8;
+  --fg-dim:#9aa0b4;
+  --glass:rgba(255,255,255,.07);
+  --glass-line:rgba(255,255,255,.14);
+  --focus:#ffffff;
+  --danger:#ff453a;
+  --accent:#7aa2ff;
+  --display:"Sora",-apple-system,"SF Pro Display",system-ui,sans-serif;
+  --body:-apple-system,"SF Pro Text","Figtree",system-ui,sans-serif;
+  --r-tile:15px;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{min-height:100%;margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+.ambient{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;background:radial-gradient(120% 80% at 50% -10%,var(--bg-2),var(--bg) 60%)}
+.ambient i{position:absolute;width:60vmax;height:60vmax;border-radius:50%;filter:blur(90px);opacity:.28;animation:drift 38s ease-in-out infinite alternate}
+.ambient i:nth-child(1){background:#2f5bff;left:-15vmax;top:-20vmax}
+.ambient i:nth-child(2){background:#8a2be2;right:-20vmax;top:10vmax;animation-duration:46s;opacity:.2}
+.ambient i:nth-child(3){background:#00a3a3;left:20vmax;bottom:-35vmax;animation-duration:52s;opacity:.16}
+@keyframes drift{to{transform:translate(8vmax,6vmax) scale(1.12)}}
+
+.wrap{position:relative;z-index:1;max-width:1320px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 64px}
+
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:15px;color:var(--fg-dim)}
+.bar .date{text-transform:capitalize}
+.bar .right{display:flex;align-items:center;gap:14px}
+.clock{font-family:var(--display);font-weight:500;font-size:20px;color:var(--fg);font-variant-numeric:tabular-nums}
+.btn{appearance:none;border:1px solid var(--glass-line);background:var(--glass);color:var(--fg);font:500 14px var(--body);padding:8px 16px;border-radius:999px;cursor:pointer;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);transition:background .2s,transform .2s}
+.btn:hover{background:rgba(255,255,255,.14)}
+.btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:transparent}
+.btn.danger{color:var(--danger)}
+
+.brand{display:flex;flex-direction:column;align-items:center;gap:10px;margin-block:12px 28px}
+.mark{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;position:relative;
+  background:linear-gradient(145deg,#2a2f3f,#0d0f16);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),inset 0 -1px 0 rgba(0,0,0,.5),0 20px 50px -12px rgba(47,91,255,.55)}
+.mark::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.18),transparent 45%)}
+.mark span{font-family:var(--display);font-weight:600;font-size:26px;letter-spacing:-.04em;background:linear-gradient(160deg,#ffffff,#9db4ff 70%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand h1{margin:0;font-family:var(--display);font-weight:300;font-size:clamp(24px,4vw,36px);letter-spacing:-.02em;text-wrap:balance}
+.brand h1 b{font-weight:600}
+.brand p{margin:0;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--fg-dim)}
+
+.status{display:flex;justify-content:center;min-height:22px;margin-bottom:14px}
+.pill[data-s="off"],.pill[data-s="wait"]{visibility:hidden}
+.pill{font-size:12px;color:var(--fg-dim);display:inline-flex;align-items:center;gap:8px;padding:4px 12px;border-radius:999px;background:var(--glass)}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--dot,#8e8e93)}
+.pill[data-s="ok"]{--dot:#30d158}.pill[data-s="saving"]{--dot:#ffd60a}.pill[data-s="off"]{--dot:#ff9f0a}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:24px 18px;padding:0;margin:0;list-style:none}
+.tile{position:relative;display:flex;flex-direction:column;align-items:center;gap:9px;text-decoration:none;color:var(--fg);
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;outline:none;touch-action:manipulation}
+.card{position:relative;width:100%;aspect-ratio:5/3;border-radius:var(--r-tile);display:grid;place-items:center;overflow:hidden;
+  background:linear-gradient(150deg,var(--c1),var(--c2));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 10px 24px -10px rgba(0,0,0,.7);
+  transform:perspective(700px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) scale(var(--s,1));
+  transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s}
+.card::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at var(--mx,50%) var(--my,0%),rgba(255,255,255,.38),transparent 55%);opacity:.55;transition:opacity .3s}
+.card svg{width:38%;height:auto;max-width:42px;stroke:#fff;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 3px 6px rgba(0,0,0,.25));position:relative}
+.label{font-size:13px;font-weight:500;color:var(--fg-dim);text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color .25s,transform .35s}
+.grid:not(.editing) .tile:hover .card,.tile:focus-visible .card{--s:1.09;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 30px 50px -16px rgba(0,0,0,.85)}
+.grid:not(.editing) .tile:hover .card::before,.tile:focus-visible .card::before{opacity:1}
+.grid:not(.editing) .tile:hover .label,.tile:focus-visible .label{color:var(--fg);transform:translateY(4px)}
+
+/* edit mode */
+.grid.editing .tile{touch-action:none;cursor:grab}
+.grid.editing .card{animation:jiggle .28s ease-in-out infinite alternate}
+.grid.editing .tile:nth-child(2n) .card{animation-delay:-.14s;animation-duration:.3s}
+@keyframes jiggle{from{transform:rotate(-1.2deg)}to{transform:rotate(1.2deg)}}
+.del{position:absolute;top:-8px;left:-8px;z-index:3;width:24px;height:24px;border-radius:50%;border:0;display:none;place-items:center;cursor:pointer;
+  background:rgba(60,60,67,.92);color:#fff;font:600 20px/1 var(--body);box-shadow:0 2px 8px rgba(0,0,0,.5);backdrop-filter:blur(10px)}
+.grid.editing .del{display:grid}
+.tile.ghost .card,.tile.ghost .label{opacity:.18}
+.floating{position:fixed;z-index:50;pointer-events:none;margin:0;transition:none}
+.floating .card{--s:1.12;box-shadow:0 40px 70px -18px rgba(0,0,0,.9)}
+.floating .label{color:var(--fg)}
+.add .card{background:var(--glass);border:1.5px dashed var(--glass-line);box-shadow:none}
+.add .card svg{stroke:var(--fg-dim)}
+.add{display:none;cursor:pointer}
+.grid.editing .add{display:flex}
+
+.empty{text-align:center;color:var(--fg-dim);padding:40px 0;font-size:15px}
+
+/* sheet */
+.sheet{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.panel{width:min(440px,100%);background:rgba(28,30,40,.92);border:1px solid var(--glass-line);border-radius:26px;padding:24px;display:grid;gap:14px}
+.panel h2{margin:0 0 4px;font-family:var(--display);font-weight:500;font-size:20px}
+.panel label{display:grid;gap:6px;font-size:13px;color:var(--fg-dim)}
+.panel input,.panel select{font:16px var(--body);color:var(--fg);background:rgba(255,255,255,.06);border:1px solid var(--glass-line);border-radius:12px;padding:10px 12px;width:100%;box-sizing:border-box}
+.panel input:focus,.panel select:focus{outline:2px solid var(--accent);outline-offset:1px}
+.swatches{display:flex;flex-wrap:wrap;gap:8px}
+.swatches button{width:30px;height:30px;border-radius:9px;border:2px solid transparent;cursor:pointer;background:linear-gradient(150deg,var(--c1),var(--c2))}
+.swatches button[aria-pressed="true"]{border-color:#fff}
+.icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px;max-height:140px;overflow:auto}
+.icons button{aspect-ratio:1;border-radius:10px;border:1px solid transparent;background:rgba(255,255,255,.06);cursor:pointer;display:grid;place-items:center}
+.icons button[aria-pressed="true"]{border-color:#fff;background:rgba(255,255,255,.16)}
+.icons svg{width:20px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}
+.actions .spacer{flex:1}
+.hint{font-size:12px;color:var(--fg-dim);text-align:center;margin-top:36px}
+
+@media (max-width:640px){
+  .grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:16px 10px}
+  .card{aspect-ratio:1;border-radius:12px}
+  .card svg{width:46%}
+  .label{font-size:9.5px;line-height:1.2;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+  .brand{margin-block:8px 20px}
+  .mark{width:54px;height:54px;border-radius:15px}.mark span{font-size:22px}
+  .bar .date{display:none}
+}
+@media (max-width:380px){.grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media (prefers-reduced-motion:reduce){
+  .ambient i,.grid.editing .card{animation:none}
+  .card,.label{transition:none}
+}
+</style>
+</head>
+<body>
+
+<div class="ambient" aria-hidden="true"><i></i><i></i><i></i></div>
+<div class="wrap">
+  <div class="bar">
+    <span class="date" id="date"></span>
+    <div class="right">
+      <span class="clock" id="clock">--:--</span>
+      <button class="btn" id="editBtn" type="button">Modifica</button>
+    </div>
+  </div>
+
+  <header class="brand">
+    <div class="mark" aria-hidden="true"><span>SA</span></div>
+    <h1>Studio <b>Accogli</b></h1>
+    <p>Accogli &amp; Associati</p>
+  </header>
+
+  <div class="status"><span class="pill" id="status" data-s="wait">Caricamento…</span></div>
+
+  <ul class="grid" id="grid" aria-label="Collegamenti"></ul>
+  <p class="empty" id="empty" hidden>Nessun collegamento ancora. Premi <b>Modifica</b> e poi <b>+</b> per aggiungerne uno.</p>
+  <p class="hint" id="hint">Tieni premuta un'icona per spostarla</p>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <form class="panel" id="form" autocomplete="off">
+    <h2 id="formTitle">Nuovo collegamento</h2>
+    <label>Nome<input id="fName" required maxlength="40"></label>
+    <label>Indirizzo<input id="fUrl" required placeholder="https://…" inputmode="url"></label>
+    <label>Icona<div class="icons" id="fIcons"></div></label>
+    <label>Colore<div class="swatches" id="fColors"></div></label>
+    <div class="actions">
+      <button class="btn danger" type="button" id="fDelete" hidden>Elimina</button>
+      <span class="spacer"></span>
+      <button class="btn" type="button" id="fCancel">Annulla</button>
+      <button class="btn primary" type="submit">Salva</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(() => {
+const ICONS = {
+  mail:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/>',
+  pec:'<rect x="2.5" y="5" width="15" height="11" rx="2"/><path d="m3 6 7 5 7-5"/><circle cx="18" cy="16.5" r="3.6"/><path d="m16.5 16.6 1 1 1.9-2.1"/>',
+  ai:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
+  bank:'<path d="M3 9.5 12 4l9 5.5"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/>',
+  card:'<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h4"/>',
+  briefcase:'<rect x="3" y="7" width="18" height="12" rx="2"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 12.5h18"/>',
+  cloud:'<path d="M7 18a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 8.5a4.5 4.5 0 0 1 .5 9.5z"/>',
+  cloudup:'<path d="M7 18a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 8.5a4.5 4.5 0 0 1 .5 9.5z"/><path d="M12 15.5v-5M9.6 12.6 12 10.2l2.4 2.4"/>',
+  folder:'<path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2h8.5A1.5 1.5 0 0 1 21 9.5v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/>',
+  server:'<rect x="4" y="4" width="16" height="7" rx="1.5"/><rect x="4" y="13" width="16" height="7" rx="1.5"/><path d="M8 7.5h.01M8 16.5h.01"/>',
+  city:'<path d="M4 20V9l5-3v14M9 20V4l7 3v13M16 20v-8l4 2v6M3 20h18M12 10v.01M12 13v.01M12 16v.01"/>',
+  tax:'<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9.5 16l5-6"/><circle cx="10" cy="10.5" r="1"/><circle cx="14" cy="15.5" r="1"/>',
+  receipt:'<path d="M6 3h12v18l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3L6 21z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+  upload:'<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15"/>',
+  tag:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>',
+  scale:'<path d="M12 4v16M8 20h8M5 7h14"/><path d="M5 7l-3 6a3 3 0 0 0 6 0zM19 7l-3 6a3 3 0 0 0 6 0z"/>',
+  shield:'<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
+  gavel:'<path d="m13 5 6 6M10 8l6 6M14.5 3.5 8.5 9.5l6 6 6-6zM11.5 12.5 4 20"/>',
+  calendar:'<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  book:'<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5"/>',
+  news:'<rect x="3" y="4" width="15" height="16" rx="2"/><path d="M18 8h2.5v10a2 2 0 0 1-4 0M7 8h7M7 12h7M7 16h4"/>',
+  bulb:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.5.4.5 1 .5 1.6V16h6v-.5c0-.6 0-1.2.5-1.6A6 6 0 0 0 12 3z"/>',
+  contacts:'<circle cx="9" cy="8.5" r="3.5"/><path d="M3 20c.5-3.5 3-5.5 6-5.5s5.5 2 6 5.5M16 5.5a3.5 3.5 0 0 1 0 6.5M18 14.8c1.7.7 2.8 2.5 3 5.2"/>',
+  social:'<path d="M4 5h16v11H9l-5 4z"/><path d="M12 13.5s-3-1.7-3-3.6a1.6 1.6 0 0 1 3-.8 1.6 1.6 0 0 1 3 .8c0 1.9-3 3.6-3 3.6z"/>',
+  chat:'<path d="M4 5h16v11H9l-5 4z"/>',
+  search:'<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-5.5-3.5-9s1-6.5 3.5-9z"/>',
+  link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>'
+};
+const COLORS = {
+  blue:['#4f8cff','#1d3fa8'], sky:['#40c4ff','#0b5e9a'], indigo:['#8b8fff','#3a2fa3'], purple:['#c57cff','#5f1f9e'],
+  pink:['#ff7ab8','#9a1a57'], red:['#ff6b6b','#9c1c2b'], orange:['#ffa04d','#a2400f'], gold:['#ffd25e','#a86a00'],
+  green:['#4fdc85','#14683a'], teal:['#36d6c3','#0d5f5a'], graphite:['#6e7385','#1d2029'], slate:['#9aa7bd','#38455c']
+};
+const GUESS = [
+  [/pec/i,'pec'],[/mail|zimbra|outlook|libero|posta/i,'mail'],[/chatgpt|openai|claude|gemini|copilot/i,'ai'],
+  [/entrate|fisco|f24|inps|inail/i,'tax'],[/riscossione/i,'receipt'],[/banca|bank|intesa|bpp|unicredit|paypal|fineco|bpb/i,'bank'],
+  [/teamsystem|cloud|drive|dropbox/i,'cloud'],[/comune/i,'city'],[/giustizia|tribunale|diritto/i,'scale'],
+  [/calendar|eventi/i,'calendar'],[/facebook|instagram|linkedin/i,'social'],[/news|sole24|ore/i,'news'],[/google/i,'search']
+];
+const guessIcon = (name,url) => { const s = name+' '+url; for (const [re,ic] of GUESS) if (re.test(s)) return ic; return 'globe'; };
+const svg = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]||ICONS.globe}</svg>`;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl = u => { u = String(u||'').trim(); if (!/^[a-z][a-z0-9+.-]*:/i.test(u)) u = 'https://' + u; return /^(https?|file):/i.test(u) ? u : '#'; };
+
+const $ = id => document.getElementById(id);
+const grid = $('grid'), statusEl = $('status');
+let items = [], editing = false, db = null, docRef = null, pendingRemote = null, dragging = null;
+const LS = 'sa-home-items';
+
+const setStatus = (s, t) => { statusEl.dataset.s = s; statusEl.textContent = t; };
+
+/* clock */
+const tick = () => {
+  const d = new Date();
+  $('clock').textContent = d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  $('date').textContent = d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+};
+tick(); setInterval(tick, 10000);
+
+/* render */
+function tileHTML(it){
+  const [c1,c2] = COLORS[it.color] || COLORS.graphite;
+  return `<a class="tile" draggable="false" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener" data-id="${esc(it.id)}" style="--c1:${c1};--c2:${c2}" title="${esc(it.name)}">
+    <button class="del" type="button" aria-label="Rimuovi ${esc(it.name)}" tabindex="-1">−</button>
+    <span class="card">${svg(it.icon)}</span><span class="label">${esc(it.name)}</span></a>`;
+}
+function render(){
+  grid.innerHTML = items.map(it => `<li style="display:contents">${tileHTML(it)}</li>`).join('') +
+    `<li style="display:contents"><div class="tile add" id="addTile" role="button" tabindex="0"><span class="card">${svg('plus')}</span><span class="label">Aggiungi</span></div></li>`;
+  $('empty').hidden = items.length > 0;
+}
+/* reorder DOM in place with FLIP animation */
+function reorderDOM(){
+  const tiles = new Map([...grid.querySelectorAll('.tile[data-id]')].map(t => [t.dataset.id, t]));
+  const first = new Map([...tiles].map(([id,t]) => [id, t.getBoundingClientRect()]));
+  const addLi = $('addTile').parentElement;
+  items.forEach(it => { const t = tiles.get(it.id); if (t) grid.insertBefore(t.parentElement, addLi); });
+  tiles.forEach((t,id) => {
+    const a = first.get(id), b = t.getBoundingClientRect();
+    const dx = a.left - b.left, dy = a.top - b.top;
+    if (!dx && !dy) return;
+    t.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'none'}],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'});
+  });
+}
+
+/* persistence: copia locale + archivio online gratuito (jsonblob.com), nessun account */
+const API = 'https://jsonblob.com/api/jsonBlob';
+let blobId = (location.hash.match(/^#s([A-Za-z0-9-]{6,})$/) || [])[1] || (()=>{ try { return localStorage.getItem('sa-blob'); } catch(e){ return null; } })();
+const showId = () => { try { localStorage.setItem('sa-blob', blobId); } catch(e){} if (location.hash !== '#s'+blobId) history.replaceState(null,'','#s'+blobId); };
+let saveTimer = null, lastSaved = '';
+function save(){
+  try { localStorage.setItem(LS, JSON.stringify(items)); } catch(e){}
+  clearTimeout(saveTimer);
+  setStatus('saving','Salvataggio…');
+  saveTimer = setTimeout(async () => {
+    const body = JSON.stringify({items, updatedAt: Date.now()});
+    try {
+      if (!blobId) {
+        const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body});
+        if (!r.ok) throw 0;
+        blobId = (r.headers.get('Location')||'').split('/').pop() || (r.headers.get('X-jsonblob-id'));
+        if (!blobId) throw 0; showId();
+      } else {
+        const r = await fetch(API+'/'+blobId, {method:'PUT', headers:{'Content-Type':'application/json','Accept':'application/json'}, body});
+        if (!r.ok) throw 0;
+      }
+      lastSaved = JSON.stringify(items);
+      setStatus('ok','Sincronizzato');
+    } catch(e){ setStatus('off','Non sincronizzato · salvato su questo dispositivo'); }
+  }, 400);
+}
+async function pull(){
+  if (!blobId || dragging || editing) return;
+  try {
+    const r = await fetch(API+'/'+blobId, {headers:{'Accept':'application/json'}, cache:'no-store'});
+    if (!r.ok) throw 0;
+    const d = await r.json();
+    if (d && Array.isArray(d.items)) applyRemote(d.items);
+    showId(); setStatus('ok','Sincronizzato');
+  } catch(e){ setStatus('off','Archivio online non raggiungibile · uso la copia locale'); }
+}
+function applyRemote(list){
+  if (!Array.isArray(list)) return;
+  if (dragging) { pendingRemote = list; return; }
+  const same = JSON.stringify(list) === JSON.stringify(items);
+  if (same) return;
+  items = list.filter(x => x && x.id).map(x => ({...x}));
+  render();
+}
+
+/* edit mode */
+function setEditing(on){
+  editing = on;
+  grid.classList.toggle('editing', on);
+  $('editBtn').textContent = on ? 'Fine' : 'Modifica';
+  $('editBtn').classList.toggle('primary', on);
+}
+$('editBtn').addEventListener('click', () => setEditing(!editing));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('sheet').hidden) closeSheet(); else setEditing(false); } });
+
+/* tvOS tilt on hover (mouse only) */
+grid.addEventListener('pointermove', e => {
+  if (e.pointerType !== 'mouse' || editing || dragging) return;
+  const card = e.target.closest('.tile[data-id] .card'); if (!card) return;
+  const r = card.getBoundingClientRect(), x = (e.clientX - r.left)/r.width, y = (e.clientY - r.top)/r.height;
+  card.style.setProperty('--ry', ((x-.5)*10).toFixed(2)+'deg');
+  card.style.setProperty('--rx', ((.5-y)*10).toFixed(2)+'deg');
+  card.style.setProperty('--mx', (x*100)+'%'); card.style.setProperty('--my', (y*100)+'%');
+});
+grid.addEventListener('pointerout', e => {
+  const card = e.target.closest('.card'); if (!card || card.contains(e.relatedTarget)) return;
+  ['--rx','--ry','--mx','--my'].forEach(p => card.style.removeProperty(p));
+});
+
+/* drag & drop (long-press like iPhone; immediate in edit mode) */
+let press = null;
+grid.addEventListener('dragstart', e => e.preventDefault());
+grid.addEventListener('contextmenu', e => { if (e.target.closest('.tile')) e.preventDefault(); });
+grid.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  if (e.target.closest('.del')) return;
+  const tile = e.target.closest('.tile[data-id]'); if (!tile) return;
+  press = {tile, id: tile.dataset.id, x: e.clientX, y: e.clientY, pid: e.pointerId, moved:false,
+    timer: setTimeout(() => { if (press && !dragging) { setEditing(true); startDrag(press.lastX ?? press.x, press.lastY ?? press.y); } }, 420)};
+});
+window.addEventListener('pointermove', e => {
+  if (!press || e.pointerId !== press.pid) return;
+  press.lastX = e.clientX; press.lastY = e.clientY;
+  const dist = Math.hypot(e.clientX - press.x, e.clientY - press.y);
+  if (!dragging) {
+    if (dist > 8) { press.moved = true;
+      if (editing) startDrag(e.clientX, e.clientY);
+      else { clearTimeout(press.timer); press = null; } }
+    return;
+  }
+  moveDrag(e.clientX, e.clientY);
+});
+window.addEventListener('touchmove', e => { if (dragging) e.preventDefault(); }, {passive:false});
+const endPress = e => {
+  if (!press || (e.pointerId !== undefined && e.pointerId !== press.pid)) return;
+  clearTimeout(press.timer);
+  if (press.moved) { suppress = true; setTimeout(() => { suppress = false; }, 400); }
+  if (dragging) endDrag();
+  press = null;
+};
+window.addEventListener('pointerup', endPress);
+window.addEventListener('pointercancel', endPress);
+
+function startDrag(x, y){
+  const t = press.tile, r = t.getBoundingClientRect();
+  const fl = t.cloneNode(true);
+  fl.classList.add('floating'); fl.removeAttribute('href');
+  fl.style.width = r.width+'px'; fl.style.left = r.left+'px'; fl.style.top = r.top+'px';
+  document.body.appendChild(fl);
+  t.classList.add('ghost');
+  dragging = {id: press.id, fl, ox: x - r.left, oy: y - r.top, lastTarget:null};
+  press.moved = true;
+  if (navigator.vibrate) try { navigator.vibrate(10); } catch(_){}
+}
+function moveDrag(x, y){
+  const d = dragging;
+  d.fl.style.left = (x - d.ox)+'px'; d.fl.style.top = (y - d.oy)+'px';
+  const over = document.elementFromPoint(x, y);
+  const target = over && over.closest('.tile[data-id]');
+  // auto scroll near edges
+  const m = 60; if (y < m) window.scrollBy(0,-12); else if (y > innerHeight - m) window.scrollBy(0,12);
+  if (!target || target.dataset.id === d.id) { d.lastTarget = null; return; }
+  if (target.dataset.id === d.lastTarget) return;
+  d.lastTarget = target.dataset.id;
+  const from = items.findIndex(i => i.id === d.id), to = items.findIndex(i => i.id === target.dataset.id);
+  if (from < 0 || to < 0) return;
+  const [it] = items.splice(from, 1); items.splice(to, 0, it);
+  reorderDOM();
+}
+function endDrag(){
+  const d = dragging; dragging = null;
+  const t = grid.querySelector(`.tile[data-id="${CSS.escape(d.id)}"]`);
+  if (t) {
+    const r = t.getBoundingClientRect();
+    const a = d.fl.animate([{left:d.fl.style.left, top:d.fl.style.top},{left:r.left+'px', top:r.top+'px'}],{duration:200,easing:'ease-out'});
+    a.onfinish = () => { d.fl.remove(); t.classList.remove('ghost'); };
+  } else d.fl.remove();
+  save();
+  if (pendingRemote) { const p = pendingRemote; pendingRemote = null; applyRemote(p); }
+}
+
+/* clicks */
+let suppress = false;
+grid.addEventListener('click', e => {
+  if (suppress) { suppress = false; e.preventDefault(); e.stopPropagation(); return; }
+  const del = e.target.closest('.del');
+  if (del) { e.preventDefault(); e.stopPropagation();
+    const id = del.closest('.tile').dataset.id;
+    items = items.filter(i => i.id !== id); render(); save(); return; }
+  if (e.target.closest('#addTile')) { openSheet(null); return; }
+  const tile = e.target.closest('.tile[data-id]'); if (!tile) return;
+  if (editing) { e.preventDefault(); openSheet(items.find(i => i.id === tile.dataset.id)); }
+}, true);
+$('grid').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'addTile') openSheet(null); });
+
+/* add / edit sheet */
+let editingItem = null, selIcon = 'globe', selColor = 'blue';
+$('fIcons').innerHTML = Object.keys(ICONS).filter(k => k !== 'plus').map(k => `<button type="button" data-k="${k}" aria-label="${k}">${svg(k)}</button>`).join('');
+$('fColors').innerHTML = Object.entries(COLORS).map(([k,[a,b]]) => `<button type="button" data-k="${k}" aria-label="${k}" style="--c1:${a};--c2:${b}"></button>`).join('');
+const markSel = () => {
+  $('fIcons').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === selIcon));
+  $('fColors').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === selColor));
+};
+$('fIcons').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { selIcon = b.dataset.k; iconTouched = true; markSel(); } });
+$('fColors').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { selColor = b.dataset.k; markSel(); } });
+let iconTouched = false;
+const autoIcon = () => { if (!iconTouched && !editingItem) { selIcon = guessIcon($('fName').value, $('fUrl').value); markSel(); } };
+$('fName').addEventListener('input', autoIcon); $('fUrl').addEventListener('input', autoIcon);
+
+function openSheet(it){
+  editingItem = it; iconTouched = false;
+  $('formTitle').textContent = it ? 'Modifica collegamento' : 'Nuovo collegamento';
+  $('fName').value = it ? it.name : ''; $('fUrl').value = it ? it.url : '';
+  selIcon = it ? it.icon : 'globe'; selColor = it ? it.color : 'blue';
+  $('fDelete').hidden = !it; markSel();
+  $('sheet').hidden = false; setTimeout(() => $('fName').focus(), 30);
+}
+function closeSheet(){ $('sheet').hidden = true; editingItem = null; }
+$('fCancel').addEventListener('click', closeSheet);
+$('sheet').addEventListener('click', e => { if (e.target === $('sheet')) closeSheet(); });
+$('fDelete').addEventListener('click', () => { if (!editingItem) return; items = items.filter(i => i.id !== editingItem.id); closeSheet(); render(); save(); });
+$('form').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('fName').value.trim(), url = safeUrl($('fUrl').value);
+  if (!name || url === '#') return;
+  if (editingItem) Object.assign(editingItem, {name, url, icon: selIcon, color: selColor});
+  else items.push({id: 'u' + Date.now().toString(36), name, url, icon: selIcon, color: selColor});
+  closeSheet(); render(); save();
+});
+
+/* boot: copia locale, poi archivio online; ricontrolla ogni 30 s e al ritorno sulla pagina */
+const DEFAULT_ITEMS = [{"id": "zimbra", "name": "Zimbra", "url": "https://webmail.comune.bari.it/#1", "icon": "mail", "color": "blue"}, {"id": "chatgpt", "name": "ChatGPT", "url": "https://chatgpt.com/", "icon": "ai", "color": "graphite"}, {"id": "bpp", "name": "BPP", "url": "https://www.bpp.it/", "icon": "bank", "color": "green"}, {"id": "intesa", "name": "Intesa Sanpaolo", "url": "https://www.intesasanpaolo.com/", "icon": "bank", "color": "teal"}, {"id": "tsdigital", "name": "TS Digital", "url": "https://app.teamsystemdigital.com/portale/#/", "icon": "cloud", "color": "indigo"}, {"id": "concerto", "name": "Concerto", "url": "https://www.concerto.it/", "icon": "globe", "color": "slate"}, {"id": "libero", "name": "Libero", "url": "https://mail1.libero.it/appsuite/#", "icon": "mail", "color": "orange"}, {"id": "studio", "name": "STUDIO", "url": "https://studioaccogli.teamsystem.io/www/", "icon": "briefcase", "color": "indigo"}, {"id": "gmail", "name": "Anna Gmail", "url": "https://mail.google.com/mail/u/0/#inbox", "icon": "mail", "color": "red"}, {"id": "pubbl", "name": "Pubblicità & Stampa", "url": "https://pubblicitaestampa.teamsystem.io/www/", "icon": "folder", "color": "purple"}, {"id": "tarricone", "name": "Tarricone", "url": "https://tarricone.cloud.teamsystem.com/", "icon": "folder", "color": "purple"}, {"id": "terre", "name": "Terre Altamura", "url": "https://terredialtamurasrl.teamsystem.io/www/", "icon": "folder", "color": "purple"}, {"id": "comunebari", "name": "Comune Bari", "url": "https://www.comune.bari.it/home", "icon": "city", "color": "red"}, {"id": "palo", "name": "Palo", "url": "https://mail.comune.palodelcolle.ba.it/static/login/", "icon": "mail", "color": "teal"}, {"id": "palopec", "name": "Palo PEC", "url": "https://webmail.pec.rupar.puglia.it/webmail/#/mbox/M8H76666/f/INBOX?p=1&type=all", "icon": "pec", "color": "teal"}, {"id": "ancrel", "name": "ANCREL", "url": "https://www.ancrel.it/it/eventi.php", "icon": "calendar", "color": "pink"}, {"id": "outlook", "name": "Posta Anna", "url": "https://outlook.live.com/mail/0/", "icon": "mail", "color": "sky"}, {"id": "ade", "name": "Agenzia Entrate", "url": "https://www.agenziaentrate.gov.it/portale/", "icon": "tax", "color": "sky"}, {"id": "procedure", "name": "Procedure.it", "url": "http://www.procedure.it/default.aspx", "icon": "book", "color": "pink"}, {"id": "eutekne", "name": "Eutekne", "url": "https://www.eutekne.it/default.aspx", "icon": "book", "color": "gold"}, {"id": "facebook", "name": "Facebook Studio", "url": "https://www.facebook.com/Accoglieassociati/", "icon": "social", "color": "blue"}, {"id": "riscossione", "name": "AdE Riscossione", "url": "https://www.agenziaentrateriscossione.gov.it/it/", "icon": "receipt", "color": "sky"}, {"id": "ateco", "name": "Ateco", "url": "http://ateco.infocamere.it/ateq20/#!/home", "icon": "tag", "color": "orange"}];
+try { const c = JSON.parse(localStorage.getItem(LS) || 'null'); if (Array.isArray(c)) items = c; } catch(e){}
+if (!items.length) items = DEFAULT_ITEMS.map(x => ({...x}));
+render();
+if (blobId) pull(); else save();
+setInterval(pull, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); });
+})();
+</script>
+
+</body>
+</html>
