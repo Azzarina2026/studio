@@ -439,6 +439,7 @@ const FIREBASE = {
   messagingSenderId: "807923308877",
   appId: "1:807923308877:web:0bb527b4acf420a092ff04"
 };
+const PAGE_VERSION = '2026-11-05 · 7';   // aggiornare a ogni pubblicazione: si legge in Modifica utenti
 const FB_SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
 const K_STATE = 'sa-state', K_USER = 'sa-user';
 const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
@@ -594,6 +595,7 @@ function renderUsers(){
     h += syncErr
       ? `<div class="mrow"><span class="nm mempty" style="margin:0;white-space:normal">Errore: ${esc(syncErr)}</span><button class="sbtn" type="button" data-act="retry">Riprova</button></div>`
       : `<p class="mempty">${fb ? 'Collegata: le modifiche arrivano subito su tutti i PC.' : 'Collegamento in corso…'}</p>`;
+    h += `<p class="mempty">Versione pagina: ${PAGE_VERSION}</p>`;
   }
   menu.innerHTML = h;
   const f = renaming ? $('renameInput') : creating ? $('newUserName') : null;
