@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CRM · Studio Accogli</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@300;500;600&family=Figtree:wght@400;500&display=swap">
+<style>
+:root{--bg:#07080c;--bg-2:#10121a;--fg:#f3f4f8;--fg-dim:#9aa0b4;--glass:rgba(255,255,255,.07);--glass-line:rgba(255,255,255,.14);
+  --display:"Sora",-apple-system,"SF Pro Display",system-ui,sans-serif;--body:-apple-system,"SF Pro Text","Figtree",system-ui,sans-serif;color-scheme:dark}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);-webkit-font-smoothing:antialiased;overflow:hidden}
+.ambient{position:fixed;inset:0;pointer-events:none;overflow:hidden;background:radial-gradient(120% 80% at 50% -10%,var(--bg-2),var(--bg) 60%)}
+.ambient i{position:absolute;width:60vmax;height:60vmax;border-radius:50%;filter:blur(90px);opacity:.28;animation:drift 38s ease-in-out infinite alternate}
+.ambient i:nth-child(1){background:#2f5bff;left:-15vmax;top:-20vmax}
+.ambient i:nth-child(2){background:#8a2be2;right:-20vmax;top:10vmax;animation-duration:46s;opacity:.2}
+.ambient i:nth-child(3){background:#00a3a3;left:20vmax;bottom:-35vmax;animation-duration:52s;opacity:.16}
+@keyframes drift{to{transform:translate(8vmax,6vmax) scale(1.12)}}
+main{position:relative;min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:max(24px,env(safe-area-inset-top,0px)) max(24px,env(safe-area-inset-bottom,0px))}
+.mark{width:96px;height:96px;border-radius:27px;display:grid;place-items:center;position:relative;background:linear-gradient(145deg,#2a2f3f,#0d0f16);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25),inset 0 -1px 0 rgba(0,0,0,.5),0 24px 60px -12px rgba(47,91,255,.55)}
+.mark::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.18),transparent 45%)}
+.mark span{font-family:var(--display);font-weight:600;font-size:38px;letter-spacing:-.04em;background:linear-gradient(160deg,#fff,#9db4ff 70%);-webkit-background-clip:text;background-clip:text;color:transparent}
+h1{margin:6px 0 0;font-family:var(--display);font-weight:300;font-size:clamp(34px,7vw,64px);letter-spacing:-.02em;text-wrap:balance}
+h1 b{font-weight:600}
+.sub{margin:0;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--fg-dim)}
+.badge{margin-top:18px;display:inline-flex;align-items:center;gap:10px;padding:10px 18px;border-radius:999px;background:var(--glass);border:1px solid var(--glass-line);
+  font-size:15px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.badge::before{content:"";width:8px;height:8px;border-radius:50%;background:#ffd60a;box-shadow:0 0 0 0 rgba(255,214,10,.6);animation:pulse 2s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 10px rgba(255,214,10,0)}100%{box-shadow:0 0 0 0 rgba(255,214,10,0)}}
+.note{margin:0;max-width:36ch;color:var(--fg-dim);font-size:15px;line-height:1.55}
+.back{color:var(--fg);font-size:14px;text-decoration:none;padding:8px 16px;border-radius:999px;border:1px solid var(--glass-line)}
+.back:hover{background:var(--glass)}
+.back:focus-visible{outline:2px solid #fff;outline-offset:2px}
+footer{position:fixed;left:0;right:0;bottom:max(18px,env(safe-area-inset-bottom,0px));text-align:center;font-size:12px;color:var(--fg-dim);opacity:.75}
+@media (prefers-reduced-motion:reduce){.ambient i,.badge::before{animation:none}}
+</style>
+</head>
+<body>
+<div class="ambient" aria-hidden="true"><i></i><i></i><i></i></div>
+<main>
+  <div class="mark" aria-hidden="true"><span>SA</span></div>
+  <h1>Studio <b>Accogli</b></h1>
+  <p class="sub">Accogli &amp; Associati</p>
+  <span class="badge">CRM · in preparazione</span>
+  <p class="note">Qui arriverà il programma dello studio per gestire clienti e pratiche in cloud.</p>
+  <a class="back" href="../preferiti/">Vai ai preferiti</a>
+</main>
+<footer>© <span id="y">2026</span> Studio Accogli</footer>
+<script>document.getElementById('y').textContent=new Date().getFullYear()</script>
+</body>
+</html>
