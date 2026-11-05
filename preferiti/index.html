@@ -104,6 +104,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
 .panel input,.panel select{font:16px var(--body);color:var(--fg);background:rgba(255,255,255,.06);border:1px solid var(--glass-line);border-radius:12px;padding:10px 12px;width:100%;box-sizing:border-box}
 .panel input:focus,.panel select:focus{outline:2px solid var(--accent);outline-offset:1px}
 .swatches{display:flex;flex-wrap:wrap;gap:8px}
+svg.brand{stroke:none!important;fill:none}
 .panel label.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;color:var(--fg);cursor:pointer;padding:4px 0}
 .toggle input{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;margin:0;padding:0;border:0;border-radius:999px;background:rgba(255,255,255,.18);position:relative;cursor:pointer;transition:background .2s}
 .toggle input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35);transition:transform .2s}
@@ -327,10 +328,17 @@ const GUESS = [
   [/pec/i,'pec'],[/mail|zimbra|outlook|libero|posta/i,'mail'],[/chatgpt|openai|claude|gemini|copilot/i,'ai'],
   [/entrate|fisco|f24|inps|inail/i,'tax'],[/riscossione/i,'receipt'],[/banca|bank|intesa|bpp|unicredit|paypal|fineco|bpb/i,'bank'],
   [/teamsystem|cloud|drive|dropbox/i,'cloud'],[/comune/i,'city'],[/giustizia|tribunale|diritto/i,'scale'],
-  [/calendar|eventi/i,'calendar'],[/facebook|instagram|linkedin/i,'social'],[/news|sole24|ore/i,'news'],[/google/i,'search']
+  [/calendar|eventi/i,'calendar'],[/facebook|instagram|linkedin/i,'social'],[/news|sole24|ore/i,'news'],[/google/i,'google']
 ];
 const guessIcon = (name,url) => { const s = name+' '+url; for (const [re,ic] of GUESS) if (re.test(s)) return ic; return 'globe'; };
-const svg = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]||ICONS.globe}</svg>`;
+/* icone a colori pieni (loghi): disegnate su sfondo bianco */
+const BRAND = {
+  google: '<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>'
+};
+const BRAND_BG = ['#ffffff', '#e4e7ee'];
+const svg = k => BRAND[k]
+  ? `<svg class="brand" viewBox="-7 -7 62 62" aria-hidden="true">${BRAND[k]}</svg>`
+  : `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]||ICONS.globe}</svg>`;
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl = u => { u = String(u||'').trim(); if (!/^[a-z][a-z0-9+.-]*:/i.test(u)) u = 'https://' + u; return /^(https?|file):/i.test(u) ? u : '#'; };
 
@@ -359,8 +367,8 @@ const ctxOf = el => el.closest('#fgrid') ? FOLDER : MAIN;
 
 function renderTrash(ctx = MAIN){
   const t = ctx.trash, P = ctx.p;
-  $(P+'trashList').innerHTML = t.map(it => { const [c1,c2] = COLORS[it.color] || COLORS.graphite;
-    return `<li class="trash-item" style="--c1:${c1};--c2:${c2}"><span class="mini">${svg(it.type === 'folder' ? 'folder' : it.icon)}</span><span title="${esc(it.name)}">${esc(it.name)}</span><button class="btn" type="button" data-restore="${esc(it.id)}">Ripristina</button></li>`; }).join('');
+  $(P+'trashList').innerHTML = t.map(it => {
+    return `<li class="trash-item" style="${grad(it)}"><span class="mini">${svg(it.icon || 'folder')}</span><span title="${esc(it.name)}">${esc(it.name)}</span><button class="btn" type="button" data-restore="${esc(it.id)}">Ripristina</button></li>`; }).join('');
   $(P+'trashEmpty').hidden = t.length > 0;
   $(P+'trashClear').hidden = t.length === 0;
   $(P+'trashCount').textContent = t.length ? `· ${t.length}` : '';
@@ -392,7 +400,7 @@ const tick = () => {
 tick();
 
 /* render */
-const grad = it => { const [c1,c2] = COLORS[it.color] || COLORS.graphite; return `--c1:${c1};--c2:${c2}`; };
+const grad = it => { const [c1,c2] = BRAND[it.icon] ? BRAND_BG : COLORS[it.color] || COLORS.graphite; return `--c1:${c1};--c2:${c2}`; };
 function tileHTML(it){
   const del = `<button class="del" type="button" aria-label="Rimuovi ${esc(it.name)}" tabindex="-1">−</button>`;
   if (it.type === 'folder' && !it.plain) {
@@ -439,7 +447,7 @@ const FIREBASE = {
   messagingSenderId: "807923308877",
   appId: "1:807923308877:web:0bb527b4acf420a092ff04"
 };
-const PAGE_VERSION = '2026-11-05 · 7';   // aggiornare a ogni pubblicazione: si legge in Modifica utenti
+const PAGE_VERSION = '2026-11-05 · 8';   // aggiornare a ogni pubblicazione: si legge in Modifica utenti
 const FB_SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
 const K_STATE = 'sa-state', K_USER = 'sa-user';
 const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
@@ -460,7 +468,7 @@ const GOOGLE_APPS = [
   ['keep','Keep','https://keep.google.com/','bulb','gold'], ['sites','Sites','https://sites.google.com/','layout','indigo'],
   ['gemini','Gemini','https://gemini.google.com/','ai','purple'], ['admin','Amministrazione','https://admin.google.com/','gear','graphite']
 ];
-const googleFolder = () => ({id:'g-folder', type:'folder', name:'Google', icon:'folder', color:'blue', trash:[],
+const googleFolder = () => ({id:'g-folder', type:'folder', name:'Google', icon:'google', color:'blue', trash:[],
   children: GOOGLE_APPS.map(([id,name,url,icon,color]) => ({id:'g-'+id, name, url, icon, color}))});
 /* aggiunge la cartella Google una sola volta per utente (il segno "mig" viaggia con i dati).
    Non cambia la data di modifica: così non può mai prevalere su modifiche vere di altri PC;
@@ -801,7 +809,7 @@ for (const el of [grid, fgrid]) {
 
 /* scheda Aggiungi / Modifica (collegamenti e cartelle) */
 let sheetCtx = MAIN, editingItem = null, selIcon = 'globe', selColor = 'blue', iconTouched = false;
-$('fIcons').innerHTML = Object.keys(ICONS).filter(k => k !== 'plus').map(k => `<button type="button" data-k="${k}" aria-label="${k}">${svg(k)}</button>`).join('');
+$('fIcons').innerHTML = [...Object.keys(BRAND), ...Object.keys(ICONS).filter(k => k !== 'plus')].map(k => `<button type="button" data-k="${k}" aria-label="${k}">${svg(k)}</button>`).join('');
 $('fColors').innerHTML = Object.entries(COLORS).map(([k,[a,b]]) => `<button type="button" data-k="${k}" aria-label="${k}" style="--c1:${a};--c2:${b}"></button>`).join('');
 const markSel = () => {
   $('fIcons').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === selIcon));
