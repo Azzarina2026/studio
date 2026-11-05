@@ -358,7 +358,8 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6
 /* Codice dell'archivio condiviso: quando è impostato qui, ogni PC usa automaticamente lo stesso archivio. */
 const SHARED_ID = '';
 let blobId = (location.hash.match(/^#s([A-Za-z0-9-]{6,})$/) || [])[1] || SHARED_ID || lsGet(K_BLOB);
-let state = null, me = null, lastRemote = '', syncing = null, saveTimer = 0;
+let state = null, me = null, lastRemote = '', syncing = null, saveTimer = 0, syncErr = '';
+const fail = (what, r) => { throw new Error(r ? `${what}: risposta ${r.status} ${r.statusText||''}`.trim() : what); };
 const schedule = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => { saveTimer = 0; sync(); }, 400); };
 
 const freshData = () => ({items: DEFAULT_ITEMS.map(x => ({...x})), trash: [], updatedAt: 0});
@@ -408,23 +409,24 @@ async function sync(){
     try {
       if (!blobId) {
         const r = await req(API, {method:'POST', body: JSON.stringify(state)});
-        if (!r.ok) throw 0;
+        if (!r.ok) fail('Creazione archivio', r);
         blobId = (r.headers.get('Location')||'').split('/').pop() || r.headers.get('X-jsonblob-id');
-        if (!blobId) throw 0;
+        if (!blobId) fail('Creazione archivio: codice non ricevuto');
         rememberBlob();
       } else {
         const r = await req(API+'/'+blobId);
-        if (!r.ok) throw 0;
+        if (!r.ok) fail('Lettura archivio', r);
         const merged = merge(normalize(await r.json()), state);
         const body = JSON.stringify(merged);
         const w = await req(API+'/'+blobId, {method:'PUT', body});
-        if (!w.ok) throw 0;
+        if (!w.ok) fail('Salvataggio archivio', w);
         lastRemote = body; state = merged; persistLocal();
         if (!editing && !dragging) showUser();
         renderUsers();
       }
-      setStatus('ok','Sincronizzato');
-    } catch(e){ setStatus('off',''); }
+      syncErr = ''; setStatus('ok','Sincronizzato');
+    } catch(e){ syncErr = e && e.message ? (e.name === 'TypeError' ? 'Connessione bloccata o assente (' + e.message + ')' : e.message) : String(e); setStatus('off',''); }
+    renderUsers();
   })();
   try { await syncing; } finally { syncing = null; }
 }
@@ -433,14 +435,14 @@ async function pull(){
   if (!blobId || document.hidden || dragging || editing || syncing || saveTimer) return;
   try {
     const r = await req(API+'/'+blobId);
-    if (!r.ok) throw 0;
+    if (!r.ok) fail('Lettura archivio', r);
     const text = await r.text();
     rememberBlob(); setStatus('ok','Sincronizzato');
     if (text === lastRemote) return;          // niente di nuovo: zero lavoro
     lastRemote = text;
     state = merge(state, normalize(JSON.parse(text)));
-    persistLocal(); showUser(); renderUsers();
-  } catch(e){ setStatus('off',''); }
+    syncErr = ''; persistLocal(); showUser(); renderUsers();
+  } catch(e){ syncErr = e && e.message || String(e); setStatus('off',''); renderUsers(); }
 }
 function applyRemote(){ showUser(); }
 
@@ -479,6 +481,7 @@ function renderUsers(){
                      : '<p class="mempty">Nessun utente eliminato.</p>';
     h += `<p class="mh">Sincronizzazione</p>`;
     h += blobId ? `<div class="mrow"><span class="code" title="Codice di questo archivio">${esc(blobId)}</span><button class="sbtn" type="button" data-act="copy">Copia</button></div>` : '<p class="mempty">Archivio non ancora creato.</p>';
+    if (syncErr || !blobId) h += `<div class="mrow"><span class="nm mempty" style="margin:0;white-space:normal">${syncErr ? 'Errore: ' + esc(syncErr) : 'In attesa del primo salvataggio.'}</span><button class="sbtn" type="button" data-act="retry">Riprova</button></div>`;
     h += `<form class="mform" data-form="link"><input class="minput" id="linkCode" placeholder="Incolla codice di un altro PC" aria-label="Codice archivio"><button class="sbtn go" type="submit">Collega</button></form>`;
   }
   menu.innerHTML = h;
@@ -522,6 +525,7 @@ menu.addEventListener('click', e => {
       if (id === me) { me = liveUsers()[0][0]; lsSet(K_USER, me); showUser(true); }
       break;
     case 'restore': touchUser(id, {deleted: false}); break;
+    case 'retry': syncErr = ''; b.textContent = '…'; sync(); return;
     case 'copy': {
       const t = blobId; navigator.clipboard?.writeText(t).then(() => { b.textContent = 'Copiato'; }, () => {});
       return;
