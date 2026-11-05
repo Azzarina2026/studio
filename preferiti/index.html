@@ -157,7 +157,6 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
 .sbtn.red{color:var(--danger)}.sbtn.go{background:var(--fg);color:var(--bg)}
 .mform{display:flex;gap:6px;padding:4px 6px}
 .mempty{margin:2px 10px 6px;font-size:12px;color:var(--fg-dim)}
-.code{flex:1;min-width:0;font:12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fg-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;user-select:all}
 .newuser input{flex:1;min-width:0}
 
 @media (max-width:640px){
@@ -344,22 +343,27 @@ function reorderDOM(){
   });
 }
 
-/* ===== Dati e sincronizzazione =====
-   Un unico archivio online gratuito (jsonblob.com, nessun account) contiene tutti gli utenti:
+/* ===== Dati e sincronizzazione (Firebase Firestore, piano gratuito) =====
+   Un solo documento "preferiti/studio" contiene tutti gli utenti:
    { v:2, users:{id:{name,createdAt,updatedAt,deleted?}}, data:{id:{items,trash,updatedAt}} }
-   Ogni utente e i suoi preferiti si fondono per "ultima modifica vince", così PC diversi
-   che modificano utenti diversi non si sovrascrivono. */
-const API = 'https://jsonblob.com/api/jsonBlob';
-const K_STATE = 'sa-state', K_USER = 'sa-user', K_BLOB = 'sa-blob';
+   Ogni utente e i suoi preferiti si fondono per "ultima modifica vince" dentro una transazione,
+   così PC diversi che modificano utenti diversi non si sovrascrivono mai.
+   Le modifiche degli altri PC arrivano in tempo reale (onSnapshot), senza controlli periodici. */
+const FIREBASE = {
+  apiKey: "AIzaSyAuGkzP4SbAZsLfxsaQ1Ywqa5TObVjON5Y",
+  authDomain: "studio-accogli.firebaseapp.com",
+  projectId: "studio-accogli",
+  storageBucket: "studio-accogli.firebasestorage.app",
+  messagingSenderId: "807923308877",
+  appId: "1:807923308877:web:0bb527b4acf420a092ff04"
+};
+const FB_SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
+const K_STATE = 'sa-state', K_USER = 'sa-user';
 const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
 const lsSet = (k,v) => { try { localStorage.setItem(k, v); } catch(e){} };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 
-/* Codice dell'archivio condiviso: quando è impostato qui, ogni PC usa automaticamente lo stesso archivio. */
-const SHARED_ID = '';
-let blobId = (location.hash.match(/^#s([A-Za-z0-9-]{6,})$/) || [])[1] || SHARED_ID || lsGet(K_BLOB);
-let state = null, me = null, lastRemote = '', syncing = null, saveTimer = 0, syncErr = '';
-const fail = (what, r) => { throw new Error(r ? `${what}: risposta ${r.status} ${r.statusText||''}`.trim() : what); };
+let state = null, me = null, syncing = null, saveTimer = 0, syncErr = '', fb = null, remoteWaiting = false;
 const schedule = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => { saveTimer = 0; sync(); }, 400); };
 
 const freshData = () => ({items: DEFAULT_ITEMS.map(x => ({...x})), trash: [], updatedAt: 0});
@@ -379,7 +383,6 @@ function merge(a, b){
 const liveUsers = () => Object.entries(state.users).filter(([,u]) => !u.deleted).sort((a,b) => (a[1].createdAt||0) - (b[1].createdAt||0));
 
 function persistLocal(){ lsSet(K_STATE, JSON.stringify(state)); }
-function rememberBlob(){ lsSet(K_BLOB, blobId); if (location.hash !== '#s'+blobId) history.replaceState(null, '', '#s'+blobId); }
 
 /* carica nella pagina i preferiti dell'utente attivo (solo se cambiati) */
 let shownSig = '';
@@ -402,49 +405,54 @@ function save(){
   setStatus('saving','Salvataggio…');
   schedule();
 }
-const req = (url, opt) => fetch(url, {cache:'no-store', ...opt, headers:{'Content-Type':'application/json','Accept':'application/json'}});
+const errText = e => {
+  const c = e && e.code || '';
+  if (c === 'permission-denied') return 'Accesso negato da Firebase: controlla le regole del database.';
+  if (c === 'unavailable') return 'Firebase non raggiungibile: connessione assente o bloccata.';
+  if (c === 'not-found') return 'Database Firestore non trovato nel progetto.';
+  return (e && e.message) || String(e);
+};
+const clean = o => JSON.parse(JSON.stringify(o));     // niente valori undefined (Firestore li rifiuta)
 async function sync(){
+  if (!fb) return;                                    // Firebase non ancora pronto: salverà all'avvio
   if (syncing) { await syncing; return sync(); }
   syncing = (async () => {
     try {
-      if (!blobId) {
-        const r = await req(API, {method:'POST', body: JSON.stringify(state)});
-        if (!r.ok) fail('Creazione archivio', r);
-        blobId = (r.headers.get('Location')||'').split('/').pop() || r.headers.get('X-jsonblob-id');
-        if (!blobId) fail('Creazione archivio: codice non ricevuto');
-        rememberBlob();
-      } else {
-        const r = await req(API+'/'+blobId);
-        if (!r.ok) fail('Lettura archivio', r);
-        const merged = merge(normalize(await r.json()), state);
-        const body = JSON.stringify(merged);
-        const w = await req(API+'/'+blobId, {method:'PUT', body});
-        if (!w.ok) fail('Salvataggio archivio', w);
-        lastRemote = body; state = merged; persistLocal();
-        if (!editing && !dragging) showUser();
-        renderUsers();
-      }
+      const merged = await fb.runTransaction(fb.db, async tx => {
+        const snap = await tx.get(fb.ref);
+        const m = clean(merge(snap.exists() ? normalize(snap.data()) : {v:2, users:{}, data:{}}, state));
+        tx.set(fb.ref, m);
+        return m;
+      });
+      state = merged; persistLocal();
+      if (!editing && !dragging) showUser(); else remoteWaiting = true;
       syncErr = ''; setStatus('ok','Sincronizzato');
-    } catch(e){ syncErr = e && e.message ? (e.name === 'TypeError' ? 'Connessione bloccata o assente (' + e.message + ')' : e.message) : String(e); setStatus('off',''); }
+    } catch(e){ syncErr = errText(e); setStatus('off',''); }
     renderUsers();
   })();
   try { await syncing; } finally { syncing = null; }
 }
-/* legge le modifiche fatte da altri PC: solo con pagina visibile e senza modifiche in corso */
-async function pull(){
-  if (!blobId || document.hidden || dragging || editing || syncing || saveTimer) return;
+/* applica le modifiche in arrivo appena finisce un trascinamento o la modalità Modifica */
+function flushRemote(){ if (remoteWaiting && !editing && !dragging) { remoteWaiting = false; showUser(); } }
+async function startFirebase(){
   try {
-    const r = await req(API+'/'+blobId);
-    if (!r.ok) fail('Lettura archivio', r);
-    const text = await r.text();
-    rememberBlob(); setStatus('ok','Sincronizzato');
-    if (text === lastRemote) return;          // niente di nuovo: zero lavoro
-    lastRemote = text;
-    state = merge(state, normalize(JSON.parse(text)));
-    syncErr = ''; persistLocal(); showUser(); renderUsers();
-  } catch(e){ syncErr = e && e.message || String(e); setStatus('off',''); renderUsers(); }
+    const [app, fs] = await Promise.all([import(FB_SDK + 'firebase-app.js'), import(FB_SDK + 'firebase-firestore.js')]);
+    const db = fs.getFirestore(app.initializeApp(FIREBASE));
+    fb = {db, ref: fs.doc(db, 'preferiti', 'studio'), runTransaction: fs.runTransaction};
+    let first = true;
+    fs.onSnapshot(fb.ref, snap => {
+      if (snap.metadata.hasPendingWrites) return;     // è una nostra scrittura appena fatta
+      if (snap.exists()) {
+        state = merge(state, normalize(snap.data()));
+        persistLocal();
+        if (!editing && !dragging) showUser(); else remoteWaiting = true;
+        renderUsers();
+      }
+      syncErr = ''; setStatus('ok','Sincronizzato');
+      if (first) { first = false; sync(); }            // porta online anche ciò che c'è solo su questo PC
+    }, e => { syncErr = errText(e); setStatus('off',''); renderUsers(); });
+  } catch(e){ syncErr = errText(e); setStatus('off',''); renderUsers(); }
 }
-function applyRemote(){ showUser(); }
 
 /* ===== Utenti ===== */
 const avatarColor = name => { const keys = Object.keys(COLORS); let h = 0; for (const c of name) h = (h*31 + c.charCodeAt(0)) >>> 0; return COLORS[keys[h % keys.length]]; };
@@ -480,9 +488,9 @@ function renderUsers(){
     h += dead.length ? '<ul>' + dead.map(([id,u]) => `<li class="mrow">${avatarHTML(u.name)}<span class="nm">${esc(u.name)}</span><button class="sbtn" type="button" data-act="restore" data-id="${id}">Recupera</button></li>`).join('') + '</ul>'
                      : '<p class="mempty">Nessun utente eliminato.</p>';
     h += `<p class="mh">Sincronizzazione</p>`;
-    h += blobId ? `<div class="mrow"><span class="code" title="Codice di questo archivio">${esc(blobId)}</span><button class="sbtn" type="button" data-act="copy">Copia</button></div>` : '<p class="mempty">Archivio non ancora creato.</p>';
-    if (syncErr || !blobId) h += `<div class="mrow"><span class="nm mempty" style="margin:0;white-space:normal">${syncErr ? 'Errore: ' + esc(syncErr) : 'In attesa del primo salvataggio.'}</span><button class="sbtn" type="button" data-act="retry">Riprova</button></div>`;
-    h += `<form class="mform" data-form="link"><input class="minput" id="linkCode" placeholder="Incolla codice di un altro PC" aria-label="Codice archivio"><button class="sbtn go" type="submit">Collega</button></form>`;
+    h += syncErr
+      ? `<div class="mrow"><span class="nm mempty" style="margin:0;white-space:normal">Errore: ${esc(syncErr)}</span><button class="sbtn" type="button" data-act="retry">Riprova</button></div>`
+      : `<p class="mempty">${fb ? 'Collegata: le modifiche arrivano subito su tutti i PC.' : 'Collegamento in corso…'}</p>`;
   }
   menu.innerHTML = h;
   const f = renaming ? $('renameInput') : creating ? $('newUserName') : null;
@@ -502,12 +510,6 @@ function addUser(name){
   me = id; lsSet(K_USER, id); persistLocal(); showUser(true); schedule();
 }
 function touchUser(id, patch){ state.users[id] = {...state.users[id], ...patch, updatedAt: Date.now()}; persistLocal(); schedule(); }
-function linkArchive(code){
-  code = code.trim().replace(/^.*#s/, '');
-  if (!/^[A-Za-z0-9-]{6,}$/.test(code) || code === blobId) return;
-  blobId = code; lastRemote = ''; rememberBlob(); setStatus('saving','Collegamento…');
-  pull().then(schedule);                            // unisce i dati di questo PC con quelli dell'archivio
-}
 $('userBtn').addEventListener('click', e => { e.stopPropagation(); menu.hidden ? openMenu() : closeMenu(); });
 document.addEventListener('pointerdown', e => { if (!menu.hidden && !$('uwrap').contains(e.target)) closeMenu(); });
 menu.addEventListener('click', e => {
@@ -525,11 +527,7 @@ menu.addEventListener('click', e => {
       if (id === me) { me = liveUsers()[0][0]; lsSet(K_USER, me); showUser(true); }
       break;
     case 'restore': touchUser(id, {deleted: false}); break;
-    case 'retry': syncErr = ''; b.textContent = '…'; sync(); return;
-    case 'copy': {
-      const t = blobId; navigator.clipboard?.writeText(t).then(() => { b.textContent = 'Copiato'; }, () => {});
-      return;
-    }
+    case 'retry': syncErr = ''; b.textContent = '…'; fb ? sync() : startFirebase(); return;
   }
   renderUsers();
 });
@@ -538,7 +536,6 @@ menu.addEventListener('submit', e => {
   const f = e.target.dataset.form;
   if (f === 'new') { const n = $('newUserName').value.trim(); if (n) { creating = false; addUser(n); closeMenu(); } }
   else if (f === 'rename') { const n = $('renameInput').value.trim(); if (n) { touchUser(e.target.dataset.id, {name: n}); renderUserChip(); } renaming = null; renderUsers(); }
-  else if (f === 'link') { linkArchive($('linkCode').value); closeMenu(); }
 });
 
 /* edit mode */
@@ -548,6 +545,7 @@ function setEditing(on){
   $('trash').hidden = !on;
   $('editBtn').textContent = on ? 'Fine' : 'Modifica';
   $('editBtn').classList.toggle('primary', on);
+  if (!on) flushRemote();
 }
 $('editBtn').addEventListener('click', () => setEditing(!editing));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('sheet').hidden) closeSheet(); else if (!menu.hidden) closeMenu(); else setEditing(false); } });
@@ -640,6 +638,7 @@ function endDrag(){
     a.onfinish = () => { d.fl.remove(); t.classList.remove('ghost'); };
   } else d.fl.remove();
   save();
+  flushRemote();
 }
 
 /* clicks */
@@ -711,9 +710,7 @@ if (!state) {
 state = normalize(state);
 me = lsGet(K_USER) || 'anna';
 showUser(true);
-if (blobId) pull(); else sync();
-setInterval(pull, 30000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); });
+startFirebase();
 })();
 </script>
 
