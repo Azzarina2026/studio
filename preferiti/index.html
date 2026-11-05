@@ -127,6 +127,19 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
 .trash-item span{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
 .trash-item button{font-size:12px;padding:6px 12px}
 .trash-empty{margin:0;font-size:13px;color:var(--fg-dim)}
+.user-chip{display:inline-flex;align-items:center;gap:8px;padding:4px 14px 4px 4px}
+.avatar{width:28px;height:28px;flex:none;border-radius:50%;display:grid;place-items:center;font:600 13px var(--display);color:#fff;background:linear-gradient(150deg,var(--c1,#6e7385),var(--c2,#1d2029))}
+.users{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:min(46vh,340px);overflow:auto}
+.urow{display:flex;align-items:center;gap:10px;padding:6px;border-radius:14px}
+.urow[aria-current="true"]{background:rgba(255,255,255,.08)}
+.urow .pick{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:0;color:var(--fg);font:500 15px var(--body);cursor:pointer;text-align:left;padding:2px}
+.urow .pick span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.urow .pick:focus-visible{outline:2px solid var(--focus);border-radius:10px}
+.urow .tick{margin-left:auto;color:#30d158;font-size:14px}
+.urow input{flex:1;min-width:0}
+.urow .btn{font-size:12px;padding:6px 10px}
+.newuser{display:flex;gap:8px}
+.newuser input{flex:1;min-width:0}
 
 @media (max-width:640px){
   .grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:16px 10px}
@@ -136,6 +149,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
   .brand{margin-block:8px 20px}
   .mark{width:54px;height:54px;border-radius:15px}.mark span{font-size:22px}
   .bar .date{display:none}
+  .user-chip #userName{max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
 @media (max-width:380px){.grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
 @media (prefers-reduced-motion:reduce){
@@ -149,6 +163,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
 <div class="ambient" aria-hidden="true"><i></i><i></i><i></i></div>
 <div class="wrap">
   <div class="bar">
+    <button class="btn user-chip" id="userBtn" type="button" aria-haspopup="dialog"><span class="avatar" id="userAvatar">A</span><span id="userName">Anna</span></button>
     <span class="date" id="date"></span>
     <div class="right">
       <span class="clock" id="clock">--:--</span>
@@ -178,6 +193,18 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
     <p>Ideata con <span class="heart" aria-label="amore">❤</span> da Guido</p>
     <small>Realizzata tramite Claude</small>
   </footer>
+</div>
+
+<div class="sheet" id="userSheet" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="usersTitle">
+    <h2 id="usersTitle">Utenti</h2>
+    <ul class="users" id="userList"></ul>
+    <form class="newuser" id="userForm" autocomplete="off">
+      <input id="newUserName" maxlength="30" placeholder="Nome nuovo utente" aria-label="Nome nuovo utente" required>
+      <button class="btn primary" type="submit">Aggiungi</button>
+    </form>
+    <div class="actions"><button class="btn" type="button" id="userClose">Chiudi</button></div>
+  </div>
 </div>
 
 <div class="sheet" id="sheet" hidden>
@@ -247,9 +274,7 @@ const safeUrl = u => { u = String(u||'').trim(); if (!/^[a-z][a-z0-9+.-]*:/i.tes
 
 const $ = id => document.getElementById(id);
 const grid = $('grid'), statusEl = $('status');
-let items = [], editing = false, db = null, docRef = null, pendingRemote = null, dragging = null;
-const LS = 'sa-home-items', LS_T = 'sa-home-trash';
-let trash = [];
+let items = [], trash = [], editing = false, dragging = null;
 function renderTrash(){
   const list = $('trashList');
   list.innerHTML = trash.map(it => { const [c1,c2] = COLORS[it.color] || COLORS.graphite;
@@ -308,51 +333,156 @@ function reorderDOM(){
   });
 }
 
-/* persistence: copia locale + archivio online gratuito (jsonblob.com), nessun account */
+/* ===== Dati e sincronizzazione =====
+   Un unico archivio online gratuito (jsonblob.com, nessun account) contiene tutti gli utenti:
+   { v:2, users:{id:{name,createdAt,updatedAt,deleted?}}, data:{id:{items,trash,updatedAt}} }
+   Ogni utente e i suoi preferiti si fondono per "ultima modifica vince", così PC diversi
+   che modificano utenti diversi non si sovrascrivono. */
 const API = 'https://jsonblob.com/api/jsonBlob';
-let blobId = (location.hash.match(/^#s([A-Za-z0-9-]{6,})$/) || [])[1] || (()=>{ try { return localStorage.getItem('sa-blob'); } catch(e){ return null; } })();
-const showId = () => { try { localStorage.setItem('sa-blob', blobId); } catch(e){} if (location.hash !== '#s'+blobId) history.replaceState(null,'','#s'+blobId); };
-let saveTimer = null, lastSaved = '';
+const K_STATE = 'sa-state', K_USER = 'sa-user', K_BLOB = 'sa-blob';
+const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
+const lsSet = (k,v) => { try { localStorage.setItem(k, v); } catch(e){} };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+let blobId = (location.hash.match(/^#s([A-Za-z0-9-]{6,})$/) || [])[1] || lsGet(K_BLOB);
+let state = null, me = null, lastRemote = '', syncing = null, saveTimer = 0;
+const schedule = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => { saveTimer = 0; sync(); }, 400); };
+
+const freshData = () => ({items: DEFAULT_ITEMS.map(x => ({...x})), trash: [], updatedAt: 0});
+function normalize(d){
+  if (d && d.v === 2 && d.users && d.data) return d;
+  const s = {v:2, users:{anna:{name:'Anna', createdAt:0, updatedAt:0}}, data:{}};
+  if (d && Array.isArray(d.items)) s.data.anna = {items:d.items, trash:Array.isArray(d.trash)?d.trash:[], updatedAt:d.updatedAt||0};
+  return s;
+}
+const newer = (a,b) => !a ? b : !b ? a : ((b.updatedAt||0) > (a.updatedAt||0) ? b : a);
+function merge(a, b){
+  const out = {v:2, users:{}, data:{}};
+  for (const k of new Set([...Object.keys(a.users), ...Object.keys(b.users)])) out.users[k] = newer(a.users[k], b.users[k]);
+  for (const k of new Set([...Object.keys(a.data), ...Object.keys(b.data)])) out.data[k] = newer(a.data[k], b.data[k]);
+  return out;
+}
+const liveUsers = () => Object.entries(state.users).filter(([,u]) => !u.deleted).sort((a,b) => (a[1].createdAt||0) - (b[1].createdAt||0));
+
+function persistLocal(){ lsSet(K_STATE, JSON.stringify(state)); }
+function rememberBlob(){ lsSet(K_BLOB, blobId); if (location.hash !== '#s'+blobId) history.replaceState(null, '', '#s'+blobId); }
+
+/* carica nella pagina i preferiti dell'utente attivo (solo se cambiati) */
+let shownSig = '';
+function showUser(force){
+  if (!state.users[me] || state.users[me].deleted) { me = (liveUsers()[0] || [])[0]; lsSet(K_USER, me || ''); }
+  if (!me) { addUser('Anna'); return; }
+  const d = state.data[me] || (state.data[me] = freshData());
+  const sig = JSON.stringify(d);
+  if (!force && sig === shownSig) return;
+  shownSig = sig;
+  items = d.items.map(x => ({...x})); trash = d.trash.map(x => ({...x}));
+  render(); renderTrash(); renderUserChip();
+}
+
+/* salva: subito in locale, poi online con un piccolo ritardo (raggruppa modifiche rapide) */
 function save(){
-  try { localStorage.setItem(LS, JSON.stringify(items)); localStorage.setItem(LS_T, JSON.stringify(trash)); } catch(e){}
-  clearTimeout(saveTimer);
+  state.data[me] = {items: items.map(x => ({...x})), trash: trash.map(x => ({...x})), updatedAt: Date.now()};
+  shownSig = JSON.stringify(state.data[me]);
+  persistLocal();
   setStatus('saving','Salvataggio…');
-  saveTimer = setTimeout(async () => {
-    const body = JSON.stringify({items, trash, updatedAt: Date.now()});
+  schedule();
+}
+const req = (url, opt) => fetch(url, {cache:'no-store', ...opt, headers:{'Content-Type':'application/json','Accept':'application/json'}});
+async function sync(){
+  if (syncing) { await syncing; return sync(); }
+  syncing = (async () => {
     try {
       if (!blobId) {
-        const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body});
+        const r = await req(API, {method:'POST', body: JSON.stringify(state)});
         if (!r.ok) throw 0;
-        blobId = (r.headers.get('Location')||'').split('/').pop() || (r.headers.get('X-jsonblob-id'));
-        if (!blobId) throw 0; showId();
+        blobId = (r.headers.get('Location')||'').split('/').pop() || r.headers.get('X-jsonblob-id');
+        if (!blobId) throw 0;
+        rememberBlob();
       } else {
-        const r = await fetch(API+'/'+blobId, {method:'PUT', headers:{'Content-Type':'application/json','Accept':'application/json'}, body});
+        const r = await req(API+'/'+blobId);
         if (!r.ok) throw 0;
+        const merged = merge(normalize(await r.json()), state);
+        const body = JSON.stringify(merged);
+        const w = await req(API+'/'+blobId, {method:'PUT', body});
+        if (!w.ok) throw 0;
+        lastRemote = body; state = merged; persistLocal();
+        if (!editing && !dragging) showUser();
+        renderUsers();
       }
-      lastSaved = JSON.stringify(items);
       setStatus('ok','Sincronizzato');
-    } catch(e){ setStatus('off','Non sincronizzato · salvato su questo dispositivo'); }
-  }, 400);
+    } catch(e){ setStatus('off',''); }
+  })();
+  try { await syncing; } finally { syncing = null; }
 }
+/* legge le modifiche fatte da altri PC: solo con pagina visibile e senza modifiche in corso */
 async function pull(){
-  if (!blobId || dragging || editing) return;
+  if (!blobId || document.hidden || dragging || editing || syncing || saveTimer) return;
   try {
-    const r = await fetch(API+'/'+blobId, {headers:{'Accept':'application/json'}, cache:'no-store'});
+    const r = await req(API+'/'+blobId);
     if (!r.ok) throw 0;
-    const d = await r.json();
-    if (d && Array.isArray(d.items)) applyRemote(d.items);
-    if (d && Array.isArray(d.trash) && JSON.stringify(d.trash) !== JSON.stringify(trash)) { trash = d.trash.map(x => ({...x})); renderTrash(); }
-    showId(); setStatus('ok','Sincronizzato');
-  } catch(e){ setStatus('off','Archivio online non raggiungibile · uso la copia locale'); }
+    const text = await r.text();
+    rememberBlob(); setStatus('ok','Sincronizzato');
+    if (text === lastRemote) return;          // niente di nuovo: zero lavoro
+    lastRemote = text;
+    state = merge(state, normalize(JSON.parse(text)));
+    persistLocal(); showUser(); renderUsers();
+  } catch(e){ setStatus('off',''); }
 }
-function applyRemote(list){
-  if (!Array.isArray(list)) return;
-  if (dragging) { pendingRemote = list; return; }
-  const same = JSON.stringify(list) === JSON.stringify(items);
-  if (same) return;
-  items = list.filter(x => x && x.id).map(x => ({...x}));
-  render();
+function applyRemote(){ showUser(); }
+
+/* ===== Utenti ===== */
+const avatarColor = name => { const keys = Object.keys(COLORS); let h = 0; for (const c of name) h = (h*31 + c.charCodeAt(0)) >>> 0; return COLORS[keys[h % keys.length]]; };
+const avatarHTML = name => { const [c1,c2] = avatarColor(name); return `<span class="avatar" style="--c1:${c1};--c2:${c2}">${esc((name.trim()[0]||'?').toUpperCase())}</span>`; };
+function renderUserChip(){
+  const name = state.users[me]?.name || '';
+  const [c1,c2] = avatarColor(name);
+  const av = $('userAvatar'); av.textContent = (name[0]||'?').toUpperCase(); av.style.setProperty('--c1',c1); av.style.setProperty('--c2',c2);
+  $('userName').textContent = name;
 }
+let renaming = null, delArmed = null;
+function renderUsers(){
+  if ($('userSheet').hidden) return;               // aggiorna la lista solo se è aperta
+  const list = liveUsers(), only = list.length === 1;
+  $('userList').innerHTML = list.map(([id,u]) => {
+    const cur = id === me;
+    if (renaming === id) return `<li class="urow" aria-current="${cur}">${avatarHTML(u.name)}<input id="renameInput" value="${esc(u.name)}" maxlength="30" aria-label="Nuovo nome"><button class="btn primary" type="button" data-act="rename-ok" data-id="${id}">Salva</button></li>`;
+    return `<li class="urow" aria-current="${cur}"><button class="pick" type="button" data-act="pick" data-id="${id}">${avatarHTML(u.name)}<span>${esc(u.name)}</span></button>${cur?'<span class="tick" aria-label="utente attivo">✓</span>':''}
+      <button class="btn" type="button" data-act="rename" data-id="${id}">Rinomina</button>
+      ${only?'':`<button class="btn danger" type="button" data-act="del" data-id="${id}">${delArmed===id?'Conferma':'Elimina'}</button>`}</li>`;
+  }).join('');
+  if (renaming) { const i = $('renameInput'); i.focus(); i.select(); }
+}
+function setUser(id){
+  if (id === me) return;
+  me = id; lsSet(K_USER, id); setEditing(false); showUser(true); renderUsers();
+}
+function addUser(name){
+  const id = 'u' + uid(), now = Date.now();
+  state.users[id] = {name, createdAt: now, updatedAt: now};
+  state.data[id] = {...freshData(), updatedAt: now};
+  me = id; lsSet(K_USER, id); persistLocal(); showUser(true); renderUsers(); schedule();
+}
+function touchUser(id, patch){ state.users[id] = {...state.users[id], ...patch, updatedAt: Date.now()}; persistLocal(); schedule(); }
+$('userBtn').addEventListener('click', () => { renaming = null; delArmed = null; $('userSheet').hidden = false; renderUsers(); });
+const closeUsers = () => { $('userSheet').hidden = true; renaming = null; delArmed = null; };
+$('userClose').addEventListener('click', closeUsers);
+$('userSheet').addEventListener('click', e => { if (e.target === $('userSheet')) closeUsers(); });
+$('userList').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const id = b.dataset.id, act = b.dataset.act;
+  if (act === 'pick') { setUser(id); closeUsers(); }
+  else if (act === 'rename') { renaming = id; delArmed = null; renderUsers(); }
+  else if (act === 'rename-ok') { const n = $('renameInput').value.trim(); if (n) touchUser(id, {name:n}); renaming = null; renderUsers(); renderUserChip(); }
+  else if (act === 'del') {
+    if (delArmed !== id) { delArmed = id; renderUsers(); return; }
+    delArmed = null; touchUser(id, {deleted:true});
+    if (id === me) { me = liveUsers()[0][0]; lsSet(K_USER, me); showUser(true); }
+    renderUsers();
+  }
+});
+$('userList').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'renameInput') { e.preventDefault(); $('userList').querySelector('[data-act="rename-ok"]').click(); } });
+$('userForm').addEventListener('submit', e => { e.preventDefault(); const n = $('newUserName').value.trim(); if (!n) return; $('newUserName').value = ''; addUser(n); closeUsers(); });
 
 /* edit mode */
 function setEditing(on){
@@ -363,16 +493,21 @@ function setEditing(on){
   $('editBtn').classList.toggle('primary', on);
 }
 $('editBtn').addEventListener('click', () => setEditing(!editing));
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('sheet').hidden) closeSheet(); else setEditing(false); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('sheet').hidden) closeSheet(); else if (!$('userSheet').hidden) closeUsers(); else setEditing(false); } });
 
-/* tvOS tilt on hover (mouse only) */
+/* tvOS tilt on hover (mouse only), al massimo una volta per fotogramma */
+let tiltEv = null, tiltRaf = 0;
 grid.addEventListener('pointermove', e => {
   if (e.pointerType !== 'mouse' || editing || dragging) return;
-  const card = e.target.closest('.tile[data-id] .card'); if (!card) return;
-  const r = card.getBoundingClientRect(), x = (e.clientX - r.left)/r.width, y = (e.clientY - r.top)/r.height;
-  card.style.setProperty('--ry', ((x-.5)*10).toFixed(2)+'deg');
-  card.style.setProperty('--rx', ((.5-y)*10).toFixed(2)+'deg');
-  card.style.setProperty('--mx', (x*100)+'%'); card.style.setProperty('--my', (y*100)+'%');
+  tiltEv = e; if (tiltRaf) return;
+  tiltRaf = requestAnimationFrame(() => {
+    tiltRaf = 0; const ev = tiltEv;
+    const card = ev.target.closest && ev.target.closest('.tile[data-id] .card'); if (!card) return;
+    const r = card.getBoundingClientRect(), x = (ev.clientX - r.left)/r.width, y = (ev.clientY - r.top)/r.height;
+    card.style.setProperty('--ry', ((x-.5)*10).toFixed(2)+'deg');
+    card.style.setProperty('--rx', ((.5-y)*10).toFixed(2)+'deg');
+    card.style.setProperty('--mx', (x*100).toFixed(1)+'%'); card.style.setProperty('--my', (y*100).toFixed(1)+'%');
+  });
 });
 grid.addEventListener('pointerout', e => {
   const card = e.target.closest('.card'); if (!card || card.contains(e.relatedTarget)) return;
@@ -448,7 +583,6 @@ function endDrag(){
     a.onfinish = () => { d.fl.remove(); t.classList.remove('ghost'); };
   } else d.fl.remove();
   save();
-  if (pendingRemote) { const p = pendingRemote; pendingRemote = null; applyRemote(p); }
 }
 
 /* clicks */
@@ -510,12 +644,17 @@ $('form').addEventListener('submit', e => {
 
 /* boot: copia locale, poi archivio online; ricontrolla ogni 30 s e al ritorno sulla pagina */
 const DEFAULT_ITEMS = [{"id": "zimbra", "name": "Zimbra", "url": "https://webmail.comune.bari.it/#1", "icon": "mail", "color": "blue"}, {"id": "chatgpt", "name": "ChatGPT", "url": "https://chatgpt.com/", "icon": "ai", "color": "graphite"}, {"id": "bpp", "name": "BPP", "url": "https://www.bpp.it/", "icon": "bank", "color": "green"}, {"id": "intesa", "name": "Intesa Sanpaolo", "url": "https://www.intesasanpaolo.com/", "icon": "bank", "color": "teal"}, {"id": "tsdigital", "name": "TS Digital", "url": "https://app.teamsystemdigital.com/portale/#/", "icon": "cloud", "color": "indigo"}, {"id": "concerto", "name": "Concerto", "url": "https://www.concerto.it/", "icon": "globe", "color": "slate"}, {"id": "libero", "name": "Libero", "url": "https://mail1.libero.it/appsuite/#", "icon": "mail", "color": "orange"}, {"id": "studio", "name": "STUDIO", "url": "https://studioaccogli.teamsystem.io/www/", "icon": "briefcase", "color": "indigo"}, {"id": "gmail", "name": "Anna Gmail", "url": "https://mail.google.com/mail/u/0/#inbox", "icon": "mail", "color": "red"}, {"id": "pubbl", "name": "Pubblicità & Stampa", "url": "https://pubblicitaestampa.teamsystem.io/www/", "icon": "folder", "color": "purple"}, {"id": "tarricone", "name": "Tarricone", "url": "https://tarricone.cloud.teamsystem.com/", "icon": "folder", "color": "purple"}, {"id": "terre", "name": "Terre Altamura", "url": "https://terredialtamurasrl.teamsystem.io/www/", "icon": "folder", "color": "purple"}, {"id": "comunebari", "name": "Comune Bari", "url": "https://www.comune.bari.it/home", "icon": "city", "color": "red"}, {"id": "palo", "name": "Palo", "url": "https://mail.comune.palodelcolle.ba.it/static/login/", "icon": "mail", "color": "teal"}, {"id": "palopec", "name": "Palo PEC", "url": "https://webmail.pec.rupar.puglia.it/webmail/#/mbox/M8H76666/f/INBOX?p=1&type=all", "icon": "pec", "color": "teal"}, {"id": "ancrel", "name": "ANCREL", "url": "https://www.ancrel.it/it/eventi.php", "icon": "calendar", "color": "pink"}, {"id": "outlook", "name": "Posta Anna", "url": "https://outlook.live.com/mail/0/", "icon": "mail", "color": "sky"}, {"id": "ade", "name": "Agenzia Entrate", "url": "https://www.agenziaentrate.gov.it/portale/", "icon": "tax", "color": "sky"}, {"id": "procedure", "name": "Procedure.it", "url": "http://www.procedure.it/default.aspx", "icon": "book", "color": "pink"}, {"id": "eutekne", "name": "Eutekne", "url": "https://www.eutekne.it/default.aspx", "icon": "book", "color": "gold"}, {"id": "facebook", "name": "Facebook Studio", "url": "https://www.facebook.com/Accoglieassociati/", "icon": "social", "color": "blue"}, {"id": "riscossione", "name": "AdE Riscossione", "url": "https://www.agenziaentrateriscossione.gov.it/it/", "icon": "receipt", "color": "sky"}, {"id": "ateco", "name": "Ateco", "url": "http://ateco.infocamere.it/ateq20/#!/home", "icon": "tag", "color": "orange"}];
-try { const c = JSON.parse(localStorage.getItem(LS) || 'null'); if (Array.isArray(c)) items = c; } catch(e){}
-try { const t = JSON.parse(localStorage.getItem(LS_T) || 'null'); if (Array.isArray(t)) trash = t; } catch(e){}
-renderTrash();
-if (!items.length) items = DEFAULT_ITEMS.map(x => ({...x}));
-render();
-if (blobId) pull(); else save();
+/* avvio: stato locale (con migrazione dalla versione precedente), poi archivio online */
+try { state = JSON.parse(lsGet(K_STATE) || 'null'); } catch(e){ state = null; }
+if (!state) {
+  let oldItems = null, oldTrash = [];
+  try { oldItems = JSON.parse(lsGet('sa-home-items') || 'null'); oldTrash = JSON.parse(lsGet('sa-home-trash') || '[]') || []; } catch(e){}
+  state = normalize(Array.isArray(oldItems) ? {items: oldItems, trash: oldTrash, updatedAt: 1} : null);
+}
+state = normalize(state);
+me = lsGet(K_USER) || 'anna';
+showUser(true);
+if (blobId) pull(); else sync();
 setInterval(pull, 30000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); });
 })();
