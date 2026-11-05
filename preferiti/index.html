@@ -247,7 +247,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
   <div class="fpanel" id="fpanel" role="dialog" aria-modal="true" aria-labelledby="fTitle">
     <div class="fhead">
       <h2 id="fTitle">Cartella</h2>
-      <div><button class="btn" id="fEditBtn" type="button">Modifica</button><button class="btn" id="fCloseBtn" type="button" aria-label="Chiudi cartella">Chiudi</button></div>
+      <div><button class="btn" id="fSetBtn" type="button" hidden>Aspetto cartella</button><button class="btn" id="fEditBtn" type="button">Modifica</button><button class="btn" id="fCloseBtn" type="button" aria-label="Chiudi cartella">Chiudi</button></div>
     </div>
     <ul class="grid" id="fgrid" aria-label="Collegamenti della cartella"></ul>
     <section class="trash" id="ftrash" hidden aria-labelledby="ftrashTitle">
@@ -369,6 +369,7 @@ function removeItem(ctx, id){
   const it = ctx.list.find(i => i.id === id); if (!it) return;
   ctx.list = ctx.list.filter(i => i.id !== id);
   ctx.trash = [{...it, deletedAt: Date.now()}, ...ctx.trash.filter(t => t.id !== id)].slice(0, 100);
+  if (ctx === MAIN && id === openFid) closeFolder();
   renderCtx(ctx); renderTrash(ctx); if (ctx === FOLDER) renderCtx(MAIN); save();
 }
 function restoreItem(ctx, id){
@@ -655,11 +656,13 @@ function setFEditing(on){
   $('ftrash').hidden = !on;
   $('fEditBtn').textContent = on ? 'Fine' : 'Modifica';
   $('fEditBtn').classList.toggle('primary', on);
+  $('fSetBtn').hidden = !on;
   if (!on) flushRemote();
 }
 const ctxEdit = (ctx, on) => ctx === FOLDER ? setFEditing(on) : setEditing(on);
 $('editBtn').addEventListener('click', () => setEditing(!editing));
 $('fEditBtn').addEventListener('click', () => setFEditing(!fEditing));
+$('fSetBtn').addEventListener('click', () => { const f = FOLDER.f; if (f) openSheet(MAIN, f); });
 
 /* cartella */
 function openFolder(id){
@@ -836,7 +839,7 @@ $('form').addEventListener('submit', e => {
     if (editingItem) Object.assign(editingItem, {name, url, icon: selIcon, color: selColor});
     else ctx.list = [...ctx.list, {id: 'u' + uid(), name, url, icon: selIcon, color: selColor}];
   }
-  closeSheet(); renderCtx(ctx); if (ctx === FOLDER) renderCtx(MAIN); save();
+  closeSheet(); renderCtx(ctx); if (ctx === FOLDER) renderCtx(MAIN); if (openFid) renderCtx(FOLDER); save();
 });
 
 /* eliminati: ripristina e svuota (conferma con secondo clic) */
