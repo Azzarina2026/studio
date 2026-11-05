@@ -104,6 +104,12 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
 .panel input,.panel select{font:16px var(--body);color:var(--fg);background:rgba(255,255,255,.06);border:1px solid var(--glass-line);border-radius:12px;padding:10px 12px;width:100%;box-sizing:border-box}
 .panel input:focus,.panel select:focus{outline:2px solid var(--accent);outline-offset:1px}
 .swatches{display:flex;flex-wrap:wrap;gap:8px}
+.panel label.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;color:var(--fg);cursor:pointer;padding:4px 0}
+.toggle input{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;margin:0;padding:0;border:0;border-radius:999px;background:rgba(255,255,255,.18);position:relative;cursor:pointer;transition:background .2s}
+.toggle input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35);transition:transform .2s}
+.toggle input:checked{background:#30d158}
+.toggle input:checked::after{transform:translateX(18px)}
+.toggle input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .swatches button{width:30px;height:30px;border-radius:9px;border:2px solid transparent;cursor:pointer;background:linear-gradient(150deg,var(--c1),var(--c2))}
 .swatches button[aria-pressed="true"]{border-color:#fff}
 .icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px;max-height:140px;overflow:auto}
@@ -131,7 +137,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
 .trash-empty{margin:0;font-size:13px;color:var(--fg-dim)}
 /* cartelle: anteprima delle icone contenute, come su iPhone */
 .tile.folder{cursor:pointer}
-.tile.folder .card{background:rgba(255,255,255,.13);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--glass-line);place-items:stretch}
+.tile.folder:not(.plain) .card{background:rgba(255,255,255,.13);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--glass-line);place-items:stretch}
 .minis{position:relative;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(2,1fr);gap:7%;padding:11% 9%;width:100%;height:100%;box-sizing:border-box}
 .minis i{border-radius:22%;display:grid;place-items:center;background:linear-gradient(150deg,var(--c1),var(--c2));min-width:0;min-height:0}
 .minis i svg{width:62%;max-width:none;stroke-width:2.2;filter:none}
@@ -260,6 +266,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
     <h2 id="formTitle">Nuovo collegamento</h2>
     <label>Nome<input id="fName" required maxlength="40"></label>
     <label id="fUrlRow">Indirizzo<input id="fUrl" required placeholder="https://…" inputmode="url"></label>
+    <label class="toggle" id="fPreviewRow" hidden>Mostra anteprima del contenuto<input type="checkbox" id="fPreview" role="switch"></label>
     <label id="fIconRow">Icona<div class="icons" id="fIcons"></div></label>
     <label>Colore<div class="swatches" id="fColors"></div></label>
     <div class="actions">
@@ -387,10 +394,11 @@ tick();
 const grad = it => { const [c1,c2] = COLORS[it.color] || COLORS.graphite; return `--c1:${c1};--c2:${c2}`; };
 function tileHTML(it){
   const del = `<button class="del" type="button" aria-label="Rimuovi ${esc(it.name)}" tabindex="-1">−</button>`;
-  if (it.type === 'folder') {
+  if (it.type === 'folder' && !it.plain) {
     const minis = (it.children || []).slice(0, 9).map(c => `<i style="${grad(c)}">${svg(c.icon)}</i>`).join('');
     return `<div class="tile folder" role="button" tabindex="0" data-id="${esc(it.id)}" title="${esc(it.name)}" aria-label="Cartella ${esc(it.name)}">${del}<span class="card"><span class="minis">${minis}</span></span><span class="label">${esc(it.name)}</span></div>`;
   }
+  if (it.type === 'folder') return `<div class="tile folder plain" role="button" tabindex="0" data-id="${esc(it.id)}" style="${grad(it)}" title="${esc(it.name)}" aria-label="Cartella ${esc(it.name)}">${del}<span class="card">${svg(it.icon || 'folder')}</span><span class="label">${esc(it.name)}</span></div>`;
   return `<a class="tile" draggable="false" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener" data-id="${esc(it.id)}" style="${grad(it)}" title="${esc(it.name)}">${del}<span class="card">${svg(it.icon)}</span><span class="label">${esc(it.name)}</span></a>`;
 }
 function renderCtx(ctx){
@@ -803,13 +811,17 @@ function openSheet(ctx, it){
   sheetCtx = ctx; editingItem = it; iconTouched = false;
   const isFolder = it?.type === 'folder';
   $('formTitle').textContent = isFolder ? 'Modifica cartella' : it ? 'Modifica collegamento' : 'Nuovo collegamento';
-  $('fUrlRow').hidden = $('fIconRow').hidden = isFolder;
+  $('fUrlRow').hidden = isFolder;
   $('fUrl').required = !isFolder;
+  $('fPreviewRow').hidden = !isFolder;
+  $('fPreview').checked = isFolder && !it.plain;
+  $('fIconRow').hidden = isFolder && !it.plain;
   $('fName').value = it ? it.name : ''; $('fUrl').value = it && !isFolder ? it.url : '';
-  selIcon = it && !isFolder ? it.icon : 'globe'; selColor = it ? it.color : 'blue';
+  selIcon = it ? (it.icon || (isFolder ? 'folder' : 'globe')) : 'globe'; selColor = it ? it.color : 'blue';
   $('fDelete').hidden = !it; markSel();
   $('sheet').hidden = false; setTimeout(() => $('fName').focus(), 30);
 }
+$('fPreview').addEventListener('change', () => { $('fIconRow').hidden = $('fPreview').checked; });
 function closeSheet(){ $('sheet').hidden = true; editingItem = null; }
 $('fCancel').addEventListener('click', closeSheet);
 $('sheet').addEventListener('click', e => { if (e.target === $('sheet')) closeSheet(); });
@@ -818,7 +830,7 @@ $('form').addEventListener('submit', e => {
   e.preventDefault();
   const ctx = sheetCtx, name = $('fName').value.trim();
   if (!name) return;
-  if (editingItem?.type === 'folder') Object.assign(editingItem, {name, color: selColor});
+  if (editingItem?.type === 'folder') Object.assign(editingItem, {name, color: selColor, icon: selIcon, plain: !$('fPreview').checked});
   else {
     const url = safeUrl($('fUrl').value); if (url === '#') return;
     if (editingItem) Object.assign(editingItem, {name, url, icon: selIcon, color: selColor});
