@@ -38,7 +38,6 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
 .wrap{position:relative;z-index:1;max-width:1320px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px calc(84px + env(safe-area-inset-bottom,0px))}
 
 .bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;font-size:15px;color:var(--fg-dim)}
-.bar .user-chip{justify-self:start}
 .bar .date{text-transform:capitalize}
 .bar .right{display:flex;align-items:center;gap:14px;justify-self:end}
 .clock{font-family:var(--display);font-weight:500;font-size:20px;color:var(--fg);font-variant-numeric:tabular-nums}
@@ -132,16 +131,33 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
 .trash-empty{margin:0;font-size:13px;color:var(--fg-dim)}
 .user-chip{display:inline-flex;align-items:center;gap:8px;padding:4px 14px 4px 4px}
 .avatar{width:28px;height:28px;flex:none;border-radius:50%;display:grid;place-items:center;font:600 13px var(--display);color:#fff;background:linear-gradient(150deg,var(--c1,#6e7385),var(--c2,#1d2029))}
-.users{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:min(46vh,340px);overflow:auto}
-.urow{display:flex;align-items:center;gap:10px;padding:6px;border-radius:14px}
-.urow[aria-current="true"]{background:rgba(255,255,255,.08)}
-.urow .pick{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:0;color:var(--fg);font:500 15px var(--body);cursor:pointer;text-align:left;padding:2px}
-.urow .pick span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.urow .pick:focus-visible{outline:2px solid var(--focus);border-radius:10px}
-.urow .tick{margin-left:auto;color:#30d158;font-size:14px}
-.urow input{flex:1;min-width:0}
-.urow .btn{font-size:12px;padding:6px 10px}
-.newuser{display:flex;gap:8px}
+.uwrap{position:relative;justify-self:start}
+.user-chip .caret{width:10px;height:10px;opacity:.6;transition:transform .2s}
+.user-chip[aria-expanded="true"] .caret{transform:rotate(180deg)}
+.umenu{position:absolute;top:calc(100% + 8px);left:0;z-index:60;width:min(280px,calc(100vw - 32px));padding:6px;border-radius:16px;
+  background:rgba(30,32,42,.94);border:1px solid var(--glass-line);box-shadow:0 24px 50px -12px rgba(0,0,0,.8);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);transform-origin:top left;animation:pop .14s ease-out}
+@keyframes pop{from{opacity:0;transform:scale(.96) translateY(-4px)}}
+.umenu ul{list-style:none;margin:0;padding:0;max-height:min(44vh,300px);overflow:auto}
+.mi{width:100%;display:flex;align-items:center;gap:10px;padding:8px 10px;border:0;border-radius:10px;background:none;color:var(--fg);font:500 14px var(--body);text-align:left;cursor:pointer}
+.mi:hover,.mi:focus-visible{background:rgba(255,255,255,.09);outline:none}
+.mi .avatar{width:24px;height:24px;font-size:11px}
+.mi .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mi .tick{color:#30d158}
+.mi .ico{width:24px;display:grid;place-items:center;color:var(--fg-dim);font-size:16px}
+.msep{height:1px;margin:6px 4px;background:var(--glass-line)}
+.mh{margin:8px 10px 4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-dim)}
+.mrow{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 10px;border-radius:10px}
+.mrow .avatar{width:24px;height:24px;font-size:11px}
+.mrow .nm{flex:1;min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow input,.minput{flex:1;min-width:0;font:14px var(--body);color:var(--fg);background:rgba(255,255,255,.06);border:1px solid var(--glass-line);border-radius:8px;padding:6px 8px}
+.mrow input:focus,.minput:focus{outline:2px solid var(--accent);outline-offset:0}
+.sbtn{flex:none;border:0;border-radius:8px;padding:5px 9px;font:500 12px var(--body);cursor:pointer;background:rgba(255,255,255,.1);color:var(--fg)}
+.sbtn:hover{background:rgba(255,255,255,.18)}
+.sbtn.red{color:var(--danger)}.sbtn.go{background:var(--fg);color:var(--bg)}
+.mform{display:flex;gap:6px;padding:4px 6px}
+.mempty{margin:2px 10px 6px;font-size:12px;color:var(--fg-dim)}
+.code{flex:1;min-width:0;font:12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fg-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;user-select:all}
 .newuser input{flex:1;min-width:0}
 
 @media (max-width:640px){
@@ -167,7 +183,10 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
 <div class="ambient" aria-hidden="true"><i></i><i></i><i></i></div>
 <div class="wrap">
   <div class="bar">
-    <button class="btn user-chip" id="userBtn" type="button" aria-haspopup="dialog"><span class="avatar" id="userAvatar">A</span><span id="userName">Anna</span></button>
+    <div class="uwrap" id="uwrap">
+      <button class="btn user-chip" id="userBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="userMenu"><span class="avatar" id="userAvatar">A</span><span id="userName">Anna</span><svg class="caret" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 3.5 5 7l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <div class="umenu" id="userMenu" hidden></div>
+    </div>
     <span class="date" id="date"></span>
     <div class="right">
       <span class="clock" id="clock">--:--</span>
@@ -197,18 +216,6 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
     <p>Ideata con <span class="heart" aria-label="amore">❤</span> da Guido</p>
     <small>Realizzata tramite Claude</small>
   </footer>
-</div>
-
-<div class="sheet" id="userSheet" hidden>
-  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="usersTitle">
-    <h2 id="usersTitle">Utenti</h2>
-    <ul class="users" id="userList"></ul>
-    <form class="newuser" id="userForm" autocomplete="off">
-      <input id="newUserName" maxlength="30" placeholder="Nome nuovo utente" aria-label="Nome nuovo utente" required>
-      <button class="btn primary" type="submit">Aggiungi</button>
-    </form>
-    <div class="actions"><button class="btn" type="button" id="userClose">Chiudi</button></div>
-  </div>
 </div>
 
 <div class="sheet" id="sheet" hidden>
@@ -348,7 +355,9 @@ const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return nu
 const lsSet = (k,v) => { try { localStorage.setItem(k, v); } catch(e){} };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 
-let blobId = (location.hash.match(/^#s([A-Za-z0-9-]{6,})$/) || [])[1] || lsGet(K_BLOB);
+/* Codice dell'archivio condiviso: quando è impostato qui, ogni PC usa automaticamente lo stesso archivio. */
+const SHARED_ID = '';
+let blobId = (location.hash.match(/^#s([A-Za-z0-9-]{6,})$/) || [])[1] || SHARED_ID || lsGet(K_BLOB);
 let state = null, me = null, lastRemote = '', syncing = null, saveTimer = 0;
 const schedule = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => { saveTimer = 0; sync(); }, 400); };
 
@@ -444,49 +453,89 @@ function renderUserChip(){
   const av = $('userAvatar'); av.textContent = (name[0]||'?').toUpperCase(); av.style.setProperty('--c1',c1); av.style.setProperty('--c2',c2);
   $('userName').textContent = name;
 }
-let renaming = null, delArmed = null;
+/* menu utenti a tendina: vista principale (scegli/crea) e vista "Modifica utenti" */
+let menuView = 'main', renaming = null, delArmed = null, creating = false;
+const menu = $('userMenu');
+const deadUsers = () => Object.entries(state.users).filter(([,u]) => u.deleted && !u.purged).sort((a,b) => (b[1].updatedAt||0) - (a[1].updatedAt||0));
 function renderUsers(){
-  if ($('userSheet').hidden) return;               // aggiorna la lista solo se è aperta
-  const list = liveUsers(), only = list.length === 1;
-  $('userList').innerHTML = list.map(([id,u]) => {
-    const cur = id === me;
-    if (renaming === id) return `<li class="urow" aria-current="${cur}">${avatarHTML(u.name)}<input id="renameInput" value="${esc(u.name)}" maxlength="30" aria-label="Nuovo nome"><button class="btn primary" type="button" data-act="rename-ok" data-id="${id}">Salva</button></li>`;
-    return `<li class="urow" aria-current="${cur}"><button class="pick" type="button" data-act="pick" data-id="${id}">${avatarHTML(u.name)}<span>${esc(u.name)}</span></button>${cur?'<span class="tick" aria-label="utente attivo">✓</span>':''}
-      <button class="btn" type="button" data-act="rename" data-id="${id}">Rinomina</button>
-      ${only?'':`<button class="btn danger" type="button" data-act="del" data-id="${id}">${delArmed===id?'Conferma':'Elimina'}</button>`}</li>`;
-  }).join('');
-  if (renaming) { const i = $('renameInput'); i.focus(); i.select(); }
+  if (menu.hidden) return;                          // nessun lavoro se il menu è chiuso
+  const live = liveUsers();
+  let h = '';
+  if (menuView === 'main') {
+    h += '<ul>' + live.map(([id,u]) => `<li><button class="mi" type="button" role="menuitemradio" aria-checked="${id===me}" data-act="pick" data-id="${id}">${avatarHTML(u.name)}<span class="nm">${esc(u.name)}</span>${id===me?'<span class="tick" aria-hidden="true">✓</span>':''}</button></li>`).join('') + '</ul>';
+    h += '<div class="msep"></div>';
+    h += creating
+      ? `<form class="mform" data-form="new"><input class="minput" id="newUserName" maxlength="30" placeholder="Nome" aria-label="Nome nuovo utente" required><button class="sbtn go" type="submit">Crea</button></form>`
+      : `<button class="mi" type="button" data-act="new"><span class="ico">＋</span><span class="nm">Nuovo utente</span></button>`;
+    h += `<button class="mi" type="button" data-act="manage"><span class="ico">✎</span><span class="nm">Modifica utenti</span></button>`;
+  } else {
+    const only = live.length === 1, dead = deadUsers();
+    h += `<button class="mi" type="button" data-act="back"><span class="ico">‹</span><span class="nm">Modifica utenti</span></button><div class="msep"></div><ul>`;
+    h += live.map(([id,u]) => renaming === id
+      ? `<li><form class="mrow" data-form="rename" data-id="${id}">${avatarHTML(u.name)}<input id="renameInput" value="${esc(u.name)}" maxlength="30" aria-label="Nuovo nome"><button class="sbtn go" type="submit">OK</button></form></li>`
+      : `<li class="mrow">${avatarHTML(u.name)}<span class="nm">${esc(u.name)}</span><button class="sbtn" type="button" data-act="rename" data-id="${id}">Rinomina</button>${only?'':`<button class="sbtn red" type="button" data-act="del" data-id="${id}">${delArmed===id?'Sicuro?':'Elimina'}</button>`}</li>`).join('') + '</ul>';
+    h += `<p class="mh">Utenti eliminati</p>`;
+    h += dead.length ? '<ul>' + dead.map(([id,u]) => `<li class="mrow">${avatarHTML(u.name)}<span class="nm">${esc(u.name)}</span><button class="sbtn" type="button" data-act="restore" data-id="${id}">Recupera</button></li>`).join('') + '</ul>'
+                     : '<p class="mempty">Nessun utente eliminato.</p>';
+    h += `<p class="mh">Sincronizzazione</p>`;
+    h += blobId ? `<div class="mrow"><span class="code" title="Codice di questo archivio">${esc(blobId)}</span><button class="sbtn" type="button" data-act="copy">Copia</button></div>` : '<p class="mempty">Archivio non ancora creato.</p>';
+    h += `<form class="mform" data-form="link"><input class="minput" id="linkCode" placeholder="Incolla codice di un altro PC" aria-label="Codice archivio"><button class="sbtn go" type="submit">Collega</button></form>`;
+  }
+  menu.innerHTML = h;
+  const f = renaming ? $('renameInput') : creating ? $('newUserName') : null;
+  if (f) { f.focus(); f.select && f.select(); }
 }
+function openMenu(){ menuView = 'main'; renaming = null; delArmed = null; creating = false; menu.hidden = false; $('userBtn').setAttribute('aria-expanded','true'); renderUsers(); }
+function closeMenu(){ if (menu.hidden) return; menu.hidden = true; $('userBtn').setAttribute('aria-expanded','false'); }
+const closeUsers = closeMenu;
 function setUser(id){
   if (id === me) return;
-  me = id; lsSet(K_USER, id); setEditing(false); showUser(true); renderUsers();
+  me = id; lsSet(K_USER, id); setEditing(false); showUser(true);
 }
 function addUser(name){
   const id = 'u' + uid(), now = Date.now();
   state.users[id] = {name, createdAt: now, updatedAt: now};
   state.data[id] = {...freshData(), updatedAt: now};
-  me = id; lsSet(K_USER, id); persistLocal(); showUser(true); renderUsers(); schedule();
+  me = id; lsSet(K_USER, id); persistLocal(); showUser(true); schedule();
 }
 function touchUser(id, patch){ state.users[id] = {...state.users[id], ...patch, updatedAt: Date.now()}; persistLocal(); schedule(); }
-$('userBtn').addEventListener('click', () => { renaming = null; delArmed = null; $('userSheet').hidden = false; renderUsers(); });
-const closeUsers = () => { $('userSheet').hidden = true; renaming = null; delArmed = null; };
-$('userClose').addEventListener('click', closeUsers);
-$('userSheet').addEventListener('click', e => { if (e.target === $('userSheet')) closeUsers(); });
-$('userList').addEventListener('click', e => {
+function linkArchive(code){
+  code = code.trim().replace(/^.*#s/, '');
+  if (!/^[A-Za-z0-9-]{6,}$/.test(code) || code === blobId) return;
+  blobId = code; lastRemote = ''; rememberBlob(); setStatus('saving','Collegamento…');
+  pull().then(schedule);                            // unisce i dati di questo PC con quelli dell'archivio
+}
+$('userBtn').addEventListener('click', e => { e.stopPropagation(); menu.hidden ? openMenu() : closeMenu(); });
+document.addEventListener('pointerdown', e => { if (!menu.hidden && !$('uwrap').contains(e.target)) closeMenu(); });
+menu.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
-  const id = b.dataset.id, act = b.dataset.act;
-  if (act === 'pick') { setUser(id); closeUsers(); }
-  else if (act === 'rename') { renaming = id; delArmed = null; renderUsers(); }
-  else if (act === 'rename-ok') { const n = $('renameInput').value.trim(); if (n) touchUser(id, {name:n}); renaming = null; renderUsers(); renderUserChip(); }
-  else if (act === 'del') {
-    if (delArmed !== id) { delArmed = id; renderUsers(); return; }
-    delArmed = null; touchUser(id, {deleted:true});
-    if (id === me) { me = liveUsers()[0][0]; lsSet(K_USER, me); showUser(true); }
-    renderUsers();
+  const id = b.dataset.id;
+  switch (b.dataset.act) {
+    case 'pick': setUser(id); closeMenu(); return;
+    case 'new': creating = true; break;
+    case 'manage': menuView = 'manage'; creating = false; break;
+    case 'back': menuView = 'main'; renaming = null; delArmed = null; break;
+    case 'rename': renaming = id; delArmed = null; break;
+    case 'del':
+      if (delArmed !== id) { delArmed = id; break; }
+      delArmed = null; touchUser(id, {deleted: true});
+      if (id === me) { me = liveUsers()[0][0]; lsSet(K_USER, me); showUser(true); }
+      break;
+    case 'restore': touchUser(id, {deleted: false}); break;
+    case 'copy': {
+      const t = blobId; navigator.clipboard?.writeText(t).then(() => { b.textContent = 'Copiato'; }, () => {});
+      return;
+    }
   }
+  renderUsers();
 });
-$('userList').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'renameInput') { e.preventDefault(); $('userList').querySelector('[data-act="rename-ok"]').click(); } });
-$('userForm').addEventListener('submit', e => { e.preventDefault(); const n = $('newUserName').value.trim(); if (!n) return; $('newUserName').value = ''; addUser(n); closeUsers(); });
+menu.addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target.dataset.form;
+  if (f === 'new') { const n = $('newUserName').value.trim(); if (n) { creating = false; addUser(n); closeMenu(); } }
+  else if (f === 'rename') { const n = $('renameInput').value.trim(); if (n) { touchUser(e.target.dataset.id, {name: n}); renderUserChip(); } renaming = null; renderUsers(); }
+  else if (f === 'link') { linkArchive($('linkCode').value); closeMenu(); }
+});
 
 /* edit mode */
 function setEditing(on){
@@ -497,7 +546,7 @@ function setEditing(on){
   $('editBtn').classList.toggle('primary', on);
 }
 $('editBtn').addEventListener('click', () => setEditing(!editing));
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('sheet').hidden) closeSheet(); else if (!$('userSheet').hidden) closeUsers(); else setEditing(false); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('sheet').hidden) closeSheet(); else if (!menu.hidden) closeMenu(); else setEditing(false); } });
 
 /* tvOS tilt on hover (mouse only), al massimo una volta per fotogramma */
 let tiltEv = null, tiltRaf = 0;
