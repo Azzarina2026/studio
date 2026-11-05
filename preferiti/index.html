@@ -129,6 +129,22 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
 .trash-item span{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
 .trash-item button{font-size:12px;padding:6px 12px}
 .trash-empty{margin:0;font-size:13px;color:var(--fg-dim)}
+/* cartelle: anteprima delle icone contenute, come su iPhone */
+.tile.folder{cursor:pointer}
+.tile.folder .card{background:rgba(255,255,255,.13);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--glass-line);place-items:stretch}
+.minis{position:relative;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(2,1fr);gap:7%;padding:11% 9%;width:100%;height:100%;box-sizing:border-box}
+.minis i{border-radius:22%;display:grid;place-items:center;background:linear-gradient(150deg,var(--c1),var(--c2));min-width:0;min-height:0}
+.minis i svg{width:62%;max-width:none;stroke-width:2.2;filter:none}
+.minis i:nth-child(n+9){display:none}
+.fsheet{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  background:rgba(0,0,0,.5);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);animation:fadein .18s ease-out}
+@keyframes fadein{from{opacity:0}}
+.fpanel{width:min(920px,100%);max-height:100%;overflow:auto;box-sizing:border-box;padding:22px 24px 26px;border-radius:30px;background:rgba(32,34,46,.72);border:1px solid var(--glass-line);
+  box-shadow:0 40px 90px -20px rgba(0,0,0,.9);animation:pop .2s cubic-bezier(.2,.8,.2,1);overscroll-behavior:contain}
+.fhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px}
+.fhead h2{margin:0;font-family:var(--display);font-weight:500;font-size:clamp(20px,3vw,26px);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fhead div{display:flex;gap:8px;flex:none}
+.fpanel .trash{margin-top:26px;background:rgba(255,255,255,.05)}
 .user-chip{display:inline-flex;align-items:center;gap:8px;padding:4px 14px 4px 4px}
 .avatar{width:28px;height:28px;flex:none;border-radius:50%;display:grid;place-items:center;font:600 13px var(--display);color:#fff;background:linear-gradient(150deg,var(--c1,#6e7385),var(--c2,#1d2029))}
 .uwrap{position:relative;justify-self:start}
@@ -163,6 +179,10 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
   .grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:16px 10px}
   .card{aspect-ratio:1;border-radius:12px}
   .card svg{width:46%}
+  .minis{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:12%;gap:8%}
+  .minis i:nth-child(n+9){display:grid}
+  .minis i:nth-child(n+10){display:none}
+  .fpanel{padding:18px 14px 20px;border-radius:24px}
   .label{font-size:9.5px;line-height:1.2;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
   .brand{margin-block:18px 16px}
   .mark{width:54px;height:54px;border-radius:15px}.mark span{font-size:22px}
@@ -217,12 +237,30 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow-x:hid
   </footer>
 </div>
 
+<div class="fsheet" id="folder" hidden>
+  <div class="fpanel" id="fpanel" role="dialog" aria-modal="true" aria-labelledby="fTitle">
+    <div class="fhead">
+      <h2 id="fTitle">Cartella</h2>
+      <div><button class="btn" id="fEditBtn" type="button">Modifica</button><button class="btn" id="fCloseBtn" type="button" aria-label="Chiudi cartella">Chiudi</button></div>
+    </div>
+    <ul class="grid" id="fgrid" aria-label="Collegamenti della cartella"></ul>
+    <section class="trash" id="ftrash" hidden aria-labelledby="ftrashTitle">
+      <div class="trash-head">
+        <h2 id="ftrashTitle">Eliminati da questa cartella<span id="ftrashCount"></span></h2>
+        <button class="btn danger" type="button" id="ftrashClear" hidden>Svuota</button>
+      </div>
+      <ul class="trash-list" id="ftrashList"></ul>
+      <p class="trash-empty" id="ftrashEmpty">Nessun collegamento eliminato da questa cartella.</p>
+    </section>
+  </div>
+</div>
+
 <div class="sheet" id="sheet" hidden>
   <form class="panel" id="form" autocomplete="off">
     <h2 id="formTitle">Nuovo collegamento</h2>
     <label>Nome<input id="fName" required maxlength="40"></label>
-    <label>Indirizzo<input id="fUrl" required placeholder="https://…" inputmode="url"></label>
-    <label>Icona<div class="icons" id="fIcons"></div></label>
+    <label id="fUrlRow">Indirizzo<input id="fUrl" required placeholder="https://…" inputmode="url"></label>
+    <label id="fIconRow">Icona<div class="icons" id="fIcons"></div></label>
     <label>Colore<div class="swatches" id="fColors"></div></label>
     <div class="actions">
       <button class="btn danger" type="button" id="fDelete" hidden>Elimina</button>
@@ -264,6 +302,13 @@ const ICONS = {
   search:'<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
   globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-5.5-3.5-9s1-6.5 3.5-9z"/>',
   link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  doc:'<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 11h6M9 14.5h6M9 18h4"/>',
+  sheet:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9.5h16M4 14.8h16M10 9.5V20"/>',
+  slides:'<rect x="3" y="4.5" width="18" height="12.5" rx="2"/><path d="M12 17v3M8.5 20h7"/><rect x="7.5" y="8" width="9" height="5.5" rx="1"/>',
+  form:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8.5h.01M9 12.5h.01M9 16.5h.01M12 8.5h4M12 12.5h4M12 16.5h4"/>',
+  video:'<rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="m16 10.5 5-3v9l-5-3"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M2.5 12h3M18.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/>',
+  layout:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/>',
   plus:'<path d="M12 5v14M5 12h14"/>'
 };
 const COLORS = {
@@ -283,66 +328,94 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>'
 const safeUrl = u => { u = String(u||'').trim(); if (!/^[a-z][a-z0-9+.-]*:/i.test(u)) u = 'https://' + u; return /^(https?|file):/i.test(u) ? u : '#'; };
 
 const $ = id => document.getElementById(id);
-const grid = $('grid'), statusEl = $('status');
-let items = [], trash = [], editing = false, dragging = null;
-function renderTrash(){
-  const list = $('trashList');
-  list.innerHTML = trash.map(it => { const [c1,c2] = COLORS[it.color] || COLORS.graphite;
-    return `<li class="trash-item" style="--c1:${c1};--c2:${c2}"><span class="mini">${svg(it.icon)}</span><span title="${esc(it.name)}">${esc(it.name)}</span><button class="btn" type="button" data-restore="${esc(it.id)}">Ripristina</button></li>`; }).join('');
-  $('trashEmpty').hidden = trash.length > 0;
-  $('trashClear').hidden = trash.length === 0;
-  $('trashCount').textContent = trash.length ? `· ${trash.length}` : '';
+const grid = $('grid'), fgrid = $('fgrid'), statusEl = $('status');
+const clone = o => structuredClone(o);
+let items = [], trash = [], editing = false, fEditing = false, dragging = null, openFid = null;
+const busy = () => editing || fEditing || !!dragging;
+
+/* Due "contesti" con la stessa logica: la griglia principale e la cartella aperta.
+   Ogni contesto ha la sua lista, i suoi eliminati e la sua modalità Modifica. */
+const MAIN = {
+  el: grid, scroller: null, addId: 'addTile', p: '',
+  get list(){ return items; }, set list(v){ items = v; },
+  get trash(){ return trash; }, set trash(v){ trash = v; },
+  get editing(){ return editing; }
+};
+const FOLDER = {
+  el: fgrid, scroller: $('fpanel'), addId: 'faddTile', p: 'f',
+  get f(){ return items.find(i => i.id === openFid && i.type === 'folder'); },
+  get list(){ return this.f?.children || []; }, set list(v){ if (this.f) this.f.children = v; },
+  get trash(){ return this.f?.trash || []; }, set trash(v){ if (this.f) this.f.trash = v; },
+  get editing(){ return fEditing; }
+};
+const ctxOf = el => el.closest('#fgrid') ? FOLDER : MAIN;
+
+function renderTrash(ctx = MAIN){
+  const t = ctx.trash, P = ctx.p;
+  $(P+'trashList').innerHTML = t.map(it => { const [c1,c2] = COLORS[it.color] || COLORS.graphite;
+    return `<li class="trash-item" style="--c1:${c1};--c2:${c2}"><span class="mini">${svg(it.type === 'folder' ? 'folder' : it.icon)}</span><span title="${esc(it.name)}">${esc(it.name)}</span><button class="btn" type="button" data-restore="${esc(it.id)}">Ripristina</button></li>`; }).join('');
+  $(P+'trashEmpty').hidden = t.length > 0;
+  $(P+'trashClear').hidden = t.length === 0;
+  $(P+'trashCount').textContent = t.length ? `· ${t.length}` : '';
 }
-function removeItem(id){
-  const it = items.find(i => i.id === id); if (!it) return;
-  items = items.filter(i => i.id !== id);
-  trash = [{...it, deletedAt: Date.now()}, ...trash.filter(t => t.id !== id)].slice(0, 100);
-  render(); renderTrash(); save();
+function removeItem(ctx, id){
+  const it = ctx.list.find(i => i.id === id); if (!it) return;
+  ctx.list = ctx.list.filter(i => i.id !== id);
+  ctx.trash = [{...it, deletedAt: Date.now()}, ...ctx.trash.filter(t => t.id !== id)].slice(0, 100);
+  renderCtx(ctx); renderTrash(ctx); if (ctx === FOLDER) renderCtx(MAIN); save();
 }
-function restoreItem(id){
-  const t = trash.find(x => x.id === id); if (!t) return;
-  trash = trash.filter(x => x.id !== id);
+function restoreItem(ctx, id){
+  const t = ctx.trash.find(x => x.id === id); if (!t) return;
+  ctx.trash = ctx.trash.filter(x => x.id !== id);
   const {deletedAt, ...it} = t;
-  if (!items.some(i => i.id === it.id)) items.push(it);
-  render(); renderTrash(); save();
+  if (!ctx.list.some(i => i.id === it.id)) ctx.list = [...ctx.list, it];
+  renderCtx(ctx); renderTrash(ctx); if (ctx === FOLDER) renderCtx(MAIN); save();
 }
 
 const setStatus = (s, t) => { statusEl.dataset.s = s; statusEl.textContent = t; };
 
-/* clock */
+/* orologio: si aggiorna solo quando cambia il minuto */
 const tick = () => {
   const d = new Date();
   $('clock').textContent = d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
   $('date').textContent = d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+  setTimeout(tick, 60000 - d.getSeconds()*1000 - d.getMilliseconds() + 50);
 };
-tick(); setInterval(tick, 10000);
+tick();
 
 /* render */
+const grad = it => { const [c1,c2] = COLORS[it.color] || COLORS.graphite; return `--c1:${c1};--c2:${c2}`; };
 function tileHTML(it){
-  const [c1,c2] = COLORS[it.color] || COLORS.graphite;
-  return `<a class="tile" draggable="false" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener" data-id="${esc(it.id)}" style="--c1:${c1};--c2:${c2}" title="${esc(it.name)}">
-    <button class="del" type="button" aria-label="Rimuovi ${esc(it.name)}" tabindex="-1">−</button>
-    <span class="card">${svg(it.icon)}</span><span class="label">${esc(it.name)}</span></a>`;
+  const del = `<button class="del" type="button" aria-label="Rimuovi ${esc(it.name)}" tabindex="-1">−</button>`;
+  if (it.type === 'folder') {
+    const minis = (it.children || []).slice(0, 9).map(c => `<i style="${grad(c)}">${svg(c.icon)}</i>`).join('');
+    return `<div class="tile folder" role="button" tabindex="0" data-id="${esc(it.id)}" title="${esc(it.name)}" aria-label="Cartella ${esc(it.name)}">${del}<span class="card"><span class="minis">${minis}</span></span><span class="label">${esc(it.name)}</span></div>`;
+  }
+  return `<a class="tile" draggable="false" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener" data-id="${esc(it.id)}" style="${grad(it)}" title="${esc(it.name)}">${del}<span class="card">${svg(it.icon)}</span><span class="label">${esc(it.name)}</span></a>`;
 }
-function render(){
-  grid.innerHTML = items.map(it => `<li style="display:contents">${tileHTML(it)}</li>`).join('') +
-    `<li style="display:contents"><div class="tile add" id="addTile" role="button" tabindex="0"><span class="card">${svg('plus')}</span><span class="label">Aggiungi</span></div></li>`;
-  $('empty').hidden = items.length > 0;
+function renderCtx(ctx){
+  ctx.el.innerHTML = ctx.list.map(it => `<li style="display:contents">${tileHTML(it)}</li>`).join('') +
+    `<li style="display:contents"><div class="tile add" id="${ctx.addId}" role="button" tabindex="0"><span class="card">${svg('plus')}</span><span class="label">Aggiungi</span></div></li>`;
+  if (ctx === MAIN) $('empty').hidden = items.length > 0;
+  else $('fTitle').textContent = FOLDER.f?.name || '';
 }
-/* reorder DOM in place with FLIP animation */
-function reorderDOM(){
-  const tiles = new Map([...grid.querySelectorAll('.tile[data-id]')].map(t => [t.dataset.id, t]));
+const render = () => renderCtx(MAIN);
+function renderAll(){
+  renderCtx(MAIN); renderTrash(MAIN);
+  if (openFid) { if (FOLDER.f) { renderCtx(FOLDER); renderTrash(FOLDER); } else closeFolder(); }
+}
+/* riordina il DOM senza ricostruirlo, con animazione FLIP */
+function reorderDOM(ctx){
+  const tiles = new Map([...ctx.el.querySelectorAll('.tile[data-id]')].map(t => [t.dataset.id, t]));
   const first = new Map([...tiles].map(([id,t]) => [id, t.getBoundingClientRect()]));
-  const addLi = $('addTile').parentElement;
-  items.forEach(it => { const t = tiles.get(it.id); if (t) grid.insertBefore(t.parentElement, addLi); });
+  const addLi = $(ctx.addId).parentElement;
+  ctx.list.forEach(it => { const t = tiles.get(it.id); if (t) ctx.el.insertBefore(t.parentElement, addLi); });
   tiles.forEach((t,id) => {
     const a = first.get(id), b = t.getBoundingClientRect();
     const dx = a.left - b.left, dy = a.top - b.top;
-    if (!dx && !dy) return;
-    t.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'none'}],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'});
+    if (dx || dy) t.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'none'}],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'});
   });
 }
-
 /* ===== Dati e sincronizzazione (Firebase Firestore, piano gratuito) =====
    Un solo documento "preferiti/studio" contiene tutti gli utenti:
    { v:2, users:{id:{name,createdAt,updatedAt,deleted?}}, data:{id:{items,trash,updatedAt}} }
@@ -366,7 +439,27 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6
 let state = null, me = null, syncing = null, saveTimer = 0, syncErr = '', fb = null, remoteWaiting = false;
 const schedule = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => { saveTimer = 0; sync(); }, 400); };
 
-const freshData = () => ({items: DEFAULT_ITEMS.map(x => ({...x})), trash: [], updatedAt: 0});
+const freshData = () => ({items: [...clone(DEFAULT_ITEMS), googleFolder()], trash: [], mig: ['google'], updatedAt: 0});
+/* Cartella Google Workspace (Gmail aziendale) */
+const GOOGLE_APPS = [
+  ['gmail','Gmail','https://mail.google.com/','mail','red'], ['calendar','Calendar','https://calendar.google.com/','calendar','blue'],
+  ['drive','Drive','https://drive.google.com/','cloudup','gold'], ['docs','Documenti','https://docs.google.com/document/','doc','blue'],
+  ['sheets','Fogli','https://docs.google.com/spreadsheets/','sheet','green'], ['slides','Presentazioni','https://docs.google.com/presentation/','slides','orange'],
+  ['forms','Moduli','https://docs.google.com/forms/','form','purple'], ['meet','Meet','https://meet.google.com/','video','teal'],
+  ['chat','Chat','https://chat.google.com/','chat','green'], ['contacts','Contatti','https://contacts.google.com/','contacts','sky'],
+  ['keep','Keep','https://keep.google.com/','bulb','gold'], ['sites','Sites','https://sites.google.com/','layout','indigo'],
+  ['gemini','Gemini','https://gemini.google.com/','ai','purple'], ['admin','Amministrazione','https://admin.google.com/','gear','graphite']
+];
+const googleFolder = () => ({id:'g-folder', type:'folder', name:'Google', icon:'folder', color:'blue', trash:[],
+  children: GOOGLE_APPS.map(([id,name,url,icon,color]) => ({id:'g-'+id, name, url, icon, color}))});
+/* aggiunge la cartella Google una sola volta per utente (il segno "mig" viaggia con i dati).
+   Non cambia la data di modifica: così non può mai prevalere su modifiche vere di altri PC;
+   viene salvata online insieme alla prima modifica reale. */
+function ensureGoogle(d){
+  if ((d.mig || []).includes('google')) return;
+  if (!d.items.some(i => i.id === 'g-folder')) d.items.push(googleFolder());
+  d.mig = [...(d.mig || []), 'google'];
+}
 function normalize(d){
   if (d && d.v === 2 && d.users && d.data) return d;
   const s = {v:2, users:{anna:{name:'Anna', createdAt:0, updatedAt:0}}, data:{}};
@@ -390,16 +483,17 @@ function showUser(force){
   if (!state.users[me] || state.users[me].deleted) { me = (liveUsers()[0] || [])[0]; lsSet(K_USER, me || ''); }
   if (!me) { addUser('Anna'); return; }
   const d = state.data[me] || (state.data[me] = freshData());
+  ensureGoogle(d);
   const sig = JSON.stringify(d);
   if (!force && sig === shownSig) return;
   shownSig = sig;
-  items = d.items.map(x => ({...x})); trash = d.trash.map(x => ({...x}));
-  render(); renderTrash(); renderUserChip();
+  items = clone(d.items); trash = clone(d.trash);
+  renderAll(); renderUserChip();
 }
 
 /* salva: subito in locale, poi online con un piccolo ritardo (raggruppa modifiche rapide) */
 function save(){
-  state.data[me] = {items: items.map(x => ({...x})), trash: trash.map(x => ({...x})), updatedAt: Date.now()};
+  state.data[me] = {...state.data[me], items: clone(items), trash: clone(trash), updatedAt: Date.now()};
   shownSig = JSON.stringify(state.data[me]);
   persistLocal();
   setStatus('saving','Salvataggio…');
@@ -425,7 +519,7 @@ async function sync(){
         return m;
       });
       state = merged; persistLocal();
-      if (!editing && !dragging) showUser(); else remoteWaiting = true;
+      if (!busy()) showUser(); else remoteWaiting = true;
       syncErr = ''; setStatus('ok','Sincronizzato');
     } catch(e){ syncErr = errText(e); setStatus('off',''); }
     renderUsers();
@@ -433,7 +527,7 @@ async function sync(){
   try { await syncing; } finally { syncing = null; }
 }
 /* applica le modifiche in arrivo appena finisce un trascinamento o la modalità Modifica */
-function flushRemote(){ if (remoteWaiting && !editing && !dragging) { remoteWaiting = false; showUser(); } }
+function flushRemote(){ if (remoteWaiting && !busy()) { remoteWaiting = false; showUser(); } }
 async function startFirebase(){
   try {
     const [app, fs] = await Promise.all([import(FB_SDK + 'firebase-app.js'), import(FB_SDK + 'firebase-firestore.js')]);
@@ -445,7 +539,7 @@ async function startFirebase(){
       if (snap.exists()) {
         state = merge(state, normalize(snap.data()));
         persistLocal();
-        if (!editing && !dragging) showUser(); else remoteWaiting = true;
+        if (!busy()) showUser(); else remoteWaiting = true;
         renderUsers();
       }
       syncErr = ''; setStatus('ok','Sincronizzato');
@@ -538,7 +632,7 @@ menu.addEventListener('submit', e => {
   else if (f === 'rename') { const n = $('renameInput').value.trim(); if (n) { touchUser(e.target.dataset.id, {name: n}); renderUserChip(); } renaming = null; renderUsers(); }
 });
 
-/* edit mode */
+/* modalità Modifica: una per la griglia principale, una per la cartella */
 function setEditing(on){
   editing = on;
   grid.classList.toggle('editing', on);
@@ -547,13 +641,43 @@ function setEditing(on){
   $('editBtn').classList.toggle('primary', on);
   if (!on) flushRemote();
 }
+function setFEditing(on){
+  fEditing = on;
+  fgrid.classList.toggle('editing', on);
+  $('ftrash').hidden = !on;
+  $('fEditBtn').textContent = on ? 'Fine' : 'Modifica';
+  $('fEditBtn').classList.toggle('primary', on);
+  if (!on) flushRemote();
+}
+const ctxEdit = (ctx, on) => ctx === FOLDER ? setFEditing(on) : setEditing(on);
 $('editBtn').addEventListener('click', () => setEditing(!editing));
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('sheet').hidden) closeSheet(); else if (!menu.hidden) closeMenu(); else setEditing(false); } });
+$('fEditBtn').addEventListener('click', () => setFEditing(!fEditing));
 
-/* tvOS tilt on hover (mouse only), al massimo una volta per fotogramma */
+/* cartella */
+function openFolder(id){
+  openFid = id; setFEditing(false);
+  renderCtx(FOLDER); renderTrash(FOLDER);
+  $('folder').hidden = false; $('fpanel').scrollTop = 0; $('fCloseBtn').focus();
+}
+function closeFolder(){
+  if (!openFid) return;
+  openFid = null; setFEditing(false); $('folder').hidden = true; fgrid.innerHTML = '';
+}
+$('fCloseBtn').addEventListener('click', closeFolder);
+$('folder').addEventListener('click', e => { if (e.target === $('folder')) closeFolder(); });
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!$('sheet').hidden) closeSheet();
+  else if (!menu.hidden) closeMenu();
+  else if (openFid) fEditing ? setFEditing(false) : closeFolder();
+  else setEditing(false);
+});
+
+/* effetto inclinazione (solo mouse), al massimo una volta per fotogramma */
 let tiltEv = null, tiltRaf = 0;
-grid.addEventListener('pointermove', e => {
-  if (e.pointerType !== 'mouse' || editing || dragging) return;
+function onTilt(e){
+  if (e.pointerType !== 'mouse' || dragging || ctxOf(e.currentTarget).editing) return;
   tiltEv = e; if (tiltRaf) return;
   tiltRaf = requestAnimationFrame(() => {
     tiltRaf = 0; const ev = tiltEv;
@@ -563,30 +687,27 @@ grid.addEventListener('pointermove', e => {
     card.style.setProperty('--rx', ((.5-y)*10).toFixed(2)+'deg');
     card.style.setProperty('--mx', (x*100).toFixed(1)+'%'); card.style.setProperty('--my', (y*100).toFixed(1)+'%');
   });
-});
-grid.addEventListener('pointerout', e => {
+}
+function onTiltOut(e){
   const card = e.target.closest('.card'); if (!card || card.contains(e.relatedTarget)) return;
   ['--rx','--ry','--mx','--my'].forEach(p => card.style.removeProperty(p));
-});
+}
 
-/* drag & drop (long-press like iPhone; immediate in edit mode) */
-let press = null;
-grid.addEventListener('dragstart', e => e.preventDefault());
-grid.addEventListener('contextmenu', e => { if (e.target.closest('.tile')) e.preventDefault(); });
-grid.addEventListener('pointerdown', e => {
-  if (e.button !== 0) return;
-  if (e.target.closest('.del')) return;
+/* trascinamento (pressione lunga come su iPhone; immediato in modalità Modifica) */
+let press = null, suppress = false;
+function onPointerDown(e){
+  if (e.button !== 0 || e.target.closest('.del')) return;
   const tile = e.target.closest('.tile[data-id]'); if (!tile) return;
-  press = {tile, id: tile.dataset.id, x: e.clientX, y: e.clientY, pid: e.pointerId, moved:false,
-    timer: setTimeout(() => { if (press && !dragging) { setEditing(true); startDrag(press.lastX ?? press.x, press.lastY ?? press.y); } }, 420)};
-});
+  const ctx = ctxOf(tile);
+  press = {ctx, tile, id: tile.dataset.id, x: e.clientX, y: e.clientY, pid: e.pointerId, moved:false,
+    timer: setTimeout(() => { if (press && !dragging) { ctxEdit(ctx, true); startDrag(press.lastX ?? press.x, press.lastY ?? press.y); } }, 420)};
+}
 window.addEventListener('pointermove', e => {
   if (!press || e.pointerId !== press.pid) return;
   press.lastX = e.clientX; press.lastY = e.clientY;
-  const dist = Math.hypot(e.clientX - press.x, e.clientY - press.y);
   if (!dragging) {
-    if (dist > 8) { press.moved = true;
-      if (editing) startDrag(e.clientX, e.clientY);
+    if (Math.hypot(e.clientX - press.x, e.clientY - press.y) > 8) { press.moved = true;
+      if (press.ctx.editing) startDrag(e.clientX, e.clientY);
       else { clearTimeout(press.timer); press = null; } }
     return;
   }
@@ -596,7 +717,7 @@ window.addEventListener('touchmove', e => { if (dragging) e.preventDefault(); },
 const endPress = e => {
   if (!press || (e.pointerId !== undefined && e.pointerId !== press.pid)) return;
   clearTimeout(press.timer);
-  if (press.moved) { suppress = true; setTimeout(() => { suppress = false; }, 400); }
+  if (press.moved) { suppress = true; setTimeout(() => { suppress = false; }, 80); }   // ignora solo il clic generato dal rilascio
   if (dragging) endDrag();
   press = null;
 };
@@ -606,57 +727,67 @@ window.addEventListener('pointercancel', endPress);
 function startDrag(x, y){
   const t = press.tile, r = t.getBoundingClientRect();
   const fl = t.cloneNode(true);
-  fl.classList.add('floating'); fl.removeAttribute('href');
+  fl.classList.add('floating'); fl.removeAttribute('href'); fl.style.zIndex = 90;
   fl.style.width = r.width+'px'; fl.style.left = r.left+'px'; fl.style.top = r.top+'px';
   document.body.appendChild(fl);
   t.classList.add('ghost');
-  dragging = {id: press.id, fl, ox: x - r.left, oy: y - r.top, lastTarget:null};
+  dragging = {ctx: press.ctx, id: press.id, fl, ox: x - r.left, oy: y - r.top, lastTarget:null};
   press.moved = true;
   if (navigator.vibrate) try { navigator.vibrate(10); } catch(_){}
 }
 function moveDrag(x, y){
-  const d = dragging;
+  const d = dragging, ctx = d.ctx;
   d.fl.style.left = (x - d.ox)+'px'; d.fl.style.top = (y - d.oy)+'px';
+  const m = 60, sc = ctx.scroller;
+  if (sc) { const r = sc.getBoundingClientRect(); if (y < r.top + m) sc.scrollTop -= 12; else if (y > r.bottom - m) sc.scrollTop += 12; }
+  else if (y < m) window.scrollBy(0,-12); else if (y > innerHeight - m) window.scrollBy(0,12);
   const over = document.elementFromPoint(x, y);
   const target = over && over.closest('.tile[data-id]');
-  // auto scroll near edges
-  const m = 60; if (y < m) window.scrollBy(0,-12); else if (y > innerHeight - m) window.scrollBy(0,12);
-  if (!target || target.dataset.id === d.id) { d.lastTarget = null; return; }
+  if (!target || !ctx.el.contains(target) || target.dataset.id === d.id) { d.lastTarget = null; return; }
   if (target.dataset.id === d.lastTarget) return;
   d.lastTarget = target.dataset.id;
-  const from = items.findIndex(i => i.id === d.id), to = items.findIndex(i => i.id === target.dataset.id);
+  const list = ctx.list, from = list.findIndex(i => i.id === d.id), to = list.findIndex(i => i.id === target.dataset.id);
   if (from < 0 || to < 0) return;
-  const [it] = items.splice(from, 1); items.splice(to, 0, it);
-  reorderDOM();
+  const [it] = list.splice(from, 1); list.splice(to, 0, it);
+  reorderDOM(ctx);
 }
 function endDrag(){
   const d = dragging; dragging = null;
-  const t = grid.querySelector(`.tile[data-id="${CSS.escape(d.id)}"]`);
+  const t = d.ctx.el.querySelector(`.tile[data-id="${CSS.escape(d.id)}"]`);
   if (t) {
     const r = t.getBoundingClientRect();
     const a = d.fl.animate([{left:d.fl.style.left, top:d.fl.style.top},{left:r.left+'px', top:r.top+'px'}],{duration:200,easing:'ease-out'});
     a.onfinish = () => { d.fl.remove(); t.classList.remove('ghost'); };
   } else d.fl.remove();
+  if (d.ctx === FOLDER) renderCtx(MAIN);            // aggiorna l'anteprima della cartella
   save();
   flushRemote();
 }
 
-/* clicks */
-let suppress = false;
-grid.addEventListener('click', e => {
+/* clic su icone, cartelle, "−" e "+" */
+function onGridClick(e){
   if (suppress) { suppress = false; e.preventDefault(); e.stopPropagation(); return; }
+  const ctx = ctxOf(e.currentTarget);
   const del = e.target.closest('.del');
-  if (del) { e.preventDefault(); e.stopPropagation();
-    const id = del.closest('.tile').dataset.id;
-    removeItem(id); return; }
-  if (e.target.closest('#addTile')) { openSheet(null); return; }
+  if (del) { e.preventDefault(); e.stopPropagation(); removeItem(ctx, del.closest('.tile').dataset.id); return; }
+  if (e.target.closest('#' + ctx.addId)) { openSheet(ctx, null); return; }
   const tile = e.target.closest('.tile[data-id]'); if (!tile) return;
-  if (editing) { e.preventDefault(); openSheet(items.find(i => i.id === tile.dataset.id)); }
-}, true);
-$('grid').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'addTile') openSheet(null); });
+  const it = ctx.list.find(i => i.id === tile.dataset.id); if (!it) return;
+  if (ctx.editing) { e.preventDefault(); openSheet(ctx, it); }
+  else if (it.type === 'folder') openFolder(it.id);
+}
+for (const el of [grid, fgrid]) {
+  el.addEventListener('pointermove', onTilt);
+  el.addEventListener('pointerout', onTiltOut);
+  el.addEventListener('dragstart', e => e.preventDefault());
+  el.addEventListener('contextmenu', e => { if (e.target.closest('.tile')) e.preventDefault(); });
+  el.addEventListener('pointerdown', onPointerDown);
+  el.addEventListener('click', onGridClick, true);
+  el.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('.tile.add, .tile.folder')) e.target.click(); });
+}
 
-/* add / edit sheet */
-let editingItem = null, selIcon = 'globe', selColor = 'blue';
+/* scheda Aggiungi / Modifica (collegamenti e cartelle) */
+let sheetCtx = MAIN, editingItem = null, selIcon = 'globe', selColor = 'blue', iconTouched = false;
 $('fIcons').innerHTML = Object.keys(ICONS).filter(k => k !== 'plus').map(k => `<button type="button" data-k="${k}" aria-label="${k}">${svg(k)}</button>`).join('');
 $('fColors').innerHTML = Object.entries(COLORS).map(([k,[a,b]]) => `<button type="button" data-k="${k}" aria-label="${k}" style="--c1:${a};--c2:${b}"></button>`).join('');
 const markSel = () => {
@@ -665,40 +796,49 @@ const markSel = () => {
 };
 $('fIcons').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { selIcon = b.dataset.k; iconTouched = true; markSel(); } });
 $('fColors').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { selColor = b.dataset.k; markSel(); } });
-let iconTouched = false;
 const autoIcon = () => { if (!iconTouched && !editingItem) { selIcon = guessIcon($('fName').value, $('fUrl').value); markSel(); } };
 $('fName').addEventListener('input', autoIcon); $('fUrl').addEventListener('input', autoIcon);
 
-function openSheet(it){
-  editingItem = it; iconTouched = false;
-  $('formTitle').textContent = it ? 'Modifica collegamento' : 'Nuovo collegamento';
-  $('fName').value = it ? it.name : ''; $('fUrl').value = it ? it.url : '';
-  selIcon = it ? it.icon : 'globe'; selColor = it ? it.color : 'blue';
+function openSheet(ctx, it){
+  sheetCtx = ctx; editingItem = it; iconTouched = false;
+  const isFolder = it?.type === 'folder';
+  $('formTitle').textContent = isFolder ? 'Modifica cartella' : it ? 'Modifica collegamento' : 'Nuovo collegamento';
+  $('fUrlRow').hidden = $('fIconRow').hidden = isFolder;
+  $('fUrl').required = !isFolder;
+  $('fName').value = it ? it.name : ''; $('fUrl').value = it && !isFolder ? it.url : '';
+  selIcon = it && !isFolder ? it.icon : 'globe'; selColor = it ? it.color : 'blue';
   $('fDelete').hidden = !it; markSel();
   $('sheet').hidden = false; setTimeout(() => $('fName').focus(), 30);
 }
 function closeSheet(){ $('sheet').hidden = true; editingItem = null; }
 $('fCancel').addEventListener('click', closeSheet);
 $('sheet').addEventListener('click', e => { if (e.target === $('sheet')) closeSheet(); });
-$('fDelete').addEventListener('click', () => { if (!editingItem) return; const id = editingItem.id; closeSheet(); removeItem(id); });
-$('trashList').addEventListener('click', e => { const b = e.target.closest('[data-restore]'); if (b) restoreItem(b.dataset.restore); });
-let clearArmed = null;
-$('trashClear').addEventListener('click', () => {
-  const b = $('trashClear');
-  if (!clearArmed) { b.textContent = 'Conferma: elimina per sempre'; clearArmed = setTimeout(() => { clearArmed = null; b.textContent = 'Svuota'; }, 4000); return; }
-  clearTimeout(clearArmed); clearArmed = null; b.textContent = 'Svuota';
-  trash = []; renderTrash(); save();
-});
+$('fDelete').addEventListener('click', () => { if (!editingItem) return; const id = editingItem.id, ctx = sheetCtx; closeSheet(); removeItem(ctx, id); });
 $('form').addEventListener('submit', e => {
   e.preventDefault();
-  const name = $('fName').value.trim(), url = safeUrl($('fUrl').value);
-  if (!name || url === '#') return;
-  if (editingItem) Object.assign(editingItem, {name, url, icon: selIcon, color: selColor});
-  else items.push({id: 'u' + Date.now().toString(36), name, url, icon: selIcon, color: selColor});
-  closeSheet(); render(); save();
+  const ctx = sheetCtx, name = $('fName').value.trim();
+  if (!name) return;
+  if (editingItem?.type === 'folder') Object.assign(editingItem, {name, color: selColor});
+  else {
+    const url = safeUrl($('fUrl').value); if (url === '#') return;
+    if (editingItem) Object.assign(editingItem, {name, url, icon: selIcon, color: selColor});
+    else ctx.list = [...ctx.list, {id: 'u' + uid(), name, url, icon: selIcon, color: selColor}];
+  }
+  closeSheet(); renderCtx(ctx); if (ctx === FOLDER) renderCtx(MAIN); save();
 });
 
-/* boot: copia locale, poi archivio online; ricontrolla ogni 30 s e al ritorno sulla pagina */
+/* eliminati: ripristina e svuota (conferma con secondo clic) */
+for (const ctx of [MAIN, FOLDER]) {
+  const P = ctx.p; let armed = null;
+  $(P+'trashList').addEventListener('click', e => { const b = e.target.closest('[data-restore]'); if (b) restoreItem(ctx, b.dataset.restore); });
+  $(P+'trashClear').addEventListener('click', () => {
+    const b = $(P+'trashClear');
+    if (!armed) { b.textContent = 'Conferma: elimina per sempre'; armed = setTimeout(() => { armed = null; b.textContent = 'Svuota'; }, 4000); return; }
+    clearTimeout(armed); armed = null; b.textContent = 'Svuota';
+    ctx.trash = []; renderTrash(ctx); save();
+  });
+}
+
 const DEFAULT_ITEMS = [{"id": "zimbra", "name": "Zimbra", "url": "https://webmail.comune.bari.it/#1", "icon": "mail", "color": "blue"}, {"id": "chatgpt", "name": "ChatGPT", "url": "https://chatgpt.com/", "icon": "ai", "color": "graphite"}, {"id": "bpp", "name": "BPP", "url": "https://www.bpp.it/", "icon": "bank", "color": "green"}, {"id": "intesa", "name": "Intesa Sanpaolo", "url": "https://www.intesasanpaolo.com/", "icon": "bank", "color": "teal"}, {"id": "tsdigital", "name": "TS Digital", "url": "https://app.teamsystemdigital.com/portale/#/", "icon": "cloud", "color": "indigo"}, {"id": "concerto", "name": "Concerto", "url": "https://www.concerto.it/", "icon": "globe", "color": "slate"}, {"id": "libero", "name": "Libero", "url": "https://mail1.libero.it/appsuite/#", "icon": "mail", "color": "orange"}, {"id": "studio", "name": "STUDIO", "url": "https://studioaccogli.teamsystem.io/www/", "icon": "briefcase", "color": "indigo"}, {"id": "gmail", "name": "Anna Gmail", "url": "https://mail.google.com/mail/u/0/#inbox", "icon": "mail", "color": "red"}, {"id": "pubbl", "name": "Pubblicità & Stampa", "url": "https://pubblicitaestampa.teamsystem.io/www/", "icon": "folder", "color": "purple"}, {"id": "tarricone", "name": "Tarricone", "url": "https://tarricone.cloud.teamsystem.com/", "icon": "folder", "color": "purple"}, {"id": "terre", "name": "Terre Altamura", "url": "https://terredialtamurasrl.teamsystem.io/www/", "icon": "folder", "color": "purple"}, {"id": "comunebari", "name": "Comune Bari", "url": "https://www.comune.bari.it/home", "icon": "city", "color": "red"}, {"id": "palo", "name": "Palo", "url": "https://mail.comune.palodelcolle.ba.it/static/login/", "icon": "mail", "color": "teal"}, {"id": "palopec", "name": "Palo PEC", "url": "https://webmail.pec.rupar.puglia.it/webmail/#/mbox/M8H76666/f/INBOX?p=1&type=all", "icon": "pec", "color": "teal"}, {"id": "ancrel", "name": "ANCREL", "url": "https://www.ancrel.it/it/eventi.php", "icon": "calendar", "color": "pink"}, {"id": "outlook", "name": "Posta Anna", "url": "https://outlook.live.com/mail/0/", "icon": "mail", "color": "sky"}, {"id": "ade", "name": "Agenzia Entrate", "url": "https://www.agenziaentrate.gov.it/portale/", "icon": "tax", "color": "sky"}, {"id": "procedure", "name": "Procedure.it", "url": "http://www.procedure.it/default.aspx", "icon": "book", "color": "pink"}, {"id": "eutekne", "name": "Eutekne", "url": "https://www.eutekne.it/default.aspx", "icon": "book", "color": "gold"}, {"id": "facebook", "name": "Facebook Studio", "url": "https://www.facebook.com/Accoglieassociati/", "icon": "social", "color": "blue"}, {"id": "riscossione", "name": "AdE Riscossione", "url": "https://www.agenziaentrateriscossione.gov.it/it/", "icon": "receipt", "color": "sky"}, {"id": "ateco", "name": "Ateco", "url": "http://ateco.infocamere.it/ateq20/#!/home", "icon": "tag", "color": "orange"}];
 /* avvio: stato locale (con migrazione dalla versione precedente), poi archivio online */
 try { state = JSON.parse(lsGet(K_STATE) || 'null'); } catch(e){ state = null; }
