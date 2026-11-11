@@ -1,0 +1,104 @@
+rules_version = '2';
+
+// Regole di sicurezza del database (Firestore) per www.studioaccogli.it
+// Sono queste regole, eseguite sui server di Google, a decidere chi legge e scrive cosa:
+// il codice del sito non può aggirarle. Vanno incollate in
+// Console Firebase → Firestore Database → Regole → Pubblica.
+//
+// Tutto ciò che non è esplicitamente permesso qui sotto è NEGATO.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ───────────── /preferiti (pagina esistente) ─────────────
+    // ##PREFERITI## Incollare qui, invariata, la regola oggi in uso per la pagina /preferiti.
+
+    // ───────────── CRM ─────────────
+    // Elenco degli account abilitati (UID assegnati da Firebase) con ruolo e profili.
+    // Deve coincidere con crm/js/data/utenti.js.
+    function utenti() {
+      return {
+        'UID_SUPER_ADMIN': { 'ruolo': 'admin',  'profili': ['anna', 'studio'] },
+        'UID_ANNA':        { 'ruolo': 'utente', 'profili': ['anna'] },
+        'UID_STUDIO':      { 'ruolo': 'utente', 'profili': ['studio'] }
+      };
+    }
+    function abilitato() { return request.auth != null && request.auth.uid in utenti(); }
+    function io()        { return utenti()[request.auth.uid]; }
+    // Finché la password temporanea non è stata cambiata, nessun dato è accessibile.
+    function attivo() {
+      return abilitato()
+        && exists(/databases/$(database)/documents/crm_utenti/$(request.auth.uid))
+        && get(/databases/$(database)/documents/crm_utenti/$(request.auth.uid)).data.pwCambiata == true;
+    }
+    function admin()  { return attivo() && io().ruolo == 'admin'; }
+    function mio(p)   { return p in io().profili; }
+    // Un cliente è visibile se appartiene ad almeno uno dei miei profili.
+    function vedo(d)  { return (mio('anna') && 'anna' in d.profili) || (mio('studio') && 'studio' in d.profili); }
+    function profiliValidi(d) { return d.profili is list && d.profili.size() >= 1 && d.profili.hasOnly(['anna', 'studio']); }
+
+    match /crm_utenti/{uid} {
+      allow read: if abilitato() && request.auth.uid == uid;
+      allow create, update: if abilitato() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['pwCambiata', 'quando'])
+        && request.resource.data.pwCambiata == true;
+    }
+
+    match /crm_clienti/{id} {
+      allow read: if attivo() && vedo(resource.data);
+      // un utente normale crea clienti solo nel proprio profilo
+      allow create: if attivo() && profiliValidi(request.resource.data)
+        && request.resource.data.nome is string && request.resource.data.nome.size() <= 200
+        && (admin() || (request.resource.data.profili.size() == 1 && mio(request.resource.data.profili[0])));
+      // anagrafica e condivisione: solo super admin. Gli utenti aggiornano note, documenti,
+      // antiriciclaggio e lo stato (attivo / codice ditta) del PROPRIO profilo.
+      allow update: if attivo() && vedo(resource.data) && profiliValidi(request.resource.data)
+        && request.resource.data.nome is string && request.resource.data.nome.size() <= 200
+        && (admin() || (
+             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stato', 'note', 'documenti', 'aml', 'agg'])
+             && request.resource.data.get('stato', {}).diff(resource.data.get('stato', {})).affectedKeys().hasOnly(io().profili)
+           ));
+      allow delete: if admin();
+
+      // Allegati del cliente, salvati a pezzi. "ambito" = 'condiviso' oppure il profilo proprietario (es. mandato).
+      match /file/{fid} {
+        function cli() { return get(/databases/$(database)/documents/crm_clienti/$(id)).data; }
+        function ambitoOk(d) { return d.ambito == 'condiviso' || mio(d.ambito); }
+        allow read, delete: if attivo() && vedo(cli()) && ambitoOk(resource.data);
+        allow create: if attivo() && vedo(cli()) && ambitoOk(request.resource.data)
+          && request.resource.data.dim is int && request.resource.data.dim <= 4194304
+          && request.resource.data.parti is int && request.resource.data.parti <= 8;
+        match /parti/{n} {
+          function file() { return get(/databases/$(database)/documents/crm_clienti/$(id)/file/$(fid)).data; }
+          allow read, delete: if attivo() && vedo(cli()) && ambitoOk(file());
+          allow create: if attivo() && vedo(cli()) && ambitoOk(file()) && request.resource.data.d.size() <= 800000;
+        }
+      }
+    }
+
+    // Incarichi, spese e proforma appartengono a un solo profilo.
+    match /crm_incarichi/{id} {
+      allow read, delete: if attivo() && mio(resource.data.profilo);
+      allow create: if attivo() && mio(request.resource.data.profilo);
+      allow update: if attivo() && mio(resource.data.profilo) && request.resource.data.profilo == resource.data.profilo;
+    }
+    match /crm_spese/{id} {
+      allow read, delete: if attivo() && mio(resource.data.profilo);
+      allow create: if attivo() && mio(request.resource.data.profilo);
+      allow update: if attivo() && mio(resource.data.profilo) && request.resource.data.profilo == resource.data.profilo;
+    }
+    match /crm_proforma/{id} {
+      allow read, delete: if attivo() && mio(resource.data.profilo);
+      allow create: if attivo() && mio(request.resource.data.profilo);
+      allow update: if attivo() && mio(resource.data.profilo) && request.resource.data.profilo == resource.data.profilo;
+    }
+    // Impostazioni del profilo (IBAN, numerazione, testi).
+    match /crm_profili/{profilo} {
+      allow read, write: if attivo() && mio(profilo);
+    }
+    // Predisposto per la futura app dei clienti: per ora chiuso a tutti.
+    match /crm_portale/{doc=**} {
+      allow read, write: if false;
+    }
+  }
+}
