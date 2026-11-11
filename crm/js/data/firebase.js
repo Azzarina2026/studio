@@ -82,6 +82,7 @@ export const backend = {
     return prova(async () => {
       const u = auth.currentUser; await u.reload();
       if (!u.emailVerified) throw { code: 'auth/unverified-email' };
+      await u.getIdToken(true);          // il server deve vedere l'indirizzo come verificato
       const segreto = await A.TotpMultiFactorGenerator.generateSecret(await A.multiFactor(u).getSession());
       return { chiave: segreto.secretKey, uri: segreto.generateQrCodeUrl(u.email, 'CRM Studio Accogli'), conferma: codice => prova(() => A.multiFactor(u).enroll(A.TotpMultiFactorGenerator.assertionForEnrollment(segreto, codice), 'Authenticator')) };
     });
