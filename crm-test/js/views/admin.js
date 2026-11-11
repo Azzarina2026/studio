@@ -73,7 +73,7 @@ async function unisci(a, b) {
 }
 
 /* ---------- importazione ---------- */
-const COLONNE = ['nome', 'tipo', 'piva', 'cf', 'sdi', 'codice', 'referente', 'via_sede_legale', 'citta_sede_legale', 'via_sede_operativa', 'citta_sede_operativa', 'pec', 'email', 'telefono', 'forfettario'];
+const COLONNE = ['nome', 'tipo', 'piva', 'cf', 'sdi', 'codice', 'referente', 'via_sede_legale', 'citta_sede_legale', 'via_sede_operativa', 'citta_sede_operativa', 'pec', 'email', 'telefono', 'forfettario', 'attivo', 'nota'];
 function leggiCsv(testo) {
   const sep = (testo.split('\n')[0].match(/;/g) || []).length >= (testo.split('\n')[0].match(/,/g) || []).length ? ';' : ',';
   const righe = []; let riga = [], cella = '', dentro = false;
@@ -109,7 +109,7 @@ async function importa(input) {
       await salva('clienti', { id: uid(), tipo: /pers|fis/i.test(v.tipo || '') ? 'persona' : 'azienda', nome, piva, cf, sdi: v.sdi || v.codice_univoco || '', referente: v.referente || '',
         sedeLegale: { via: v.via_sede_legale || v.indirizzo || '', citta: v.citta_sede_legale || [v.cap, v.citta || v.comune, v.provincia && `(${v.provincia})`].filter(Boolean).join(' ') },
         sedeOperativa: { via: v.via_sede_operativa || '', citta: v.citta_sede_operativa || '' }, pec: v.pec || '', email: v.email || '', telefono: v.telefono || '',
-        forfettario: /^(si|sì|s|x|1|true)$/i.test(v.forfettario || ''), profili: [p], stato: { [p]: { attivo: true, codice } }, note: [], documenti: [], aml: [], portale: { abilitato: false }, creato: today() }, { silenzioso: true });
+        forfettario: /^(si|sì|s|x|1|true)$/i.test(v.forfettario || ''), profili: [p], stato: { [p]: { attivo: !/^(no|n|0|false)$/i.test(v.attivo || ''), codice } }, note: v.nota ? [{ id: uid(), testo: v.nota, data: today(), autore: 'Importazione' }] : [], documenti: [], aml: [], portale: { abilitato: false }, creato: today() }, { silenzioso: true });
       nuovi++;
     }
     toast(`Importazione completata: ${nuovi} nuovi, ${agganciati} collegati a clienti esistenti, ${saltati} saltati.`);

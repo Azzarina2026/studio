@@ -11,16 +11,19 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ───────────── /preferiti (pagina esistente) ─────────────
-    // ##PREFERITI## Incollare qui, invariata, la regola oggi in uso per la pagina /preferiti.
+    // Regola già in uso, lasciata invariata.
+    match /preferiti/studio {
+      allow read, write: if true;
+    }
 
     // ───────────── CRM ─────────────
     // Elenco degli account abilitati (UID assegnati da Firebase) con ruolo e profili.
     // Deve coincidere con crm/js/data/utenti.js.
     function utenti() {
       return {
-        'UID_SUPER_ADMIN': { 'ruolo': 'admin',  'profili': ['anna', 'studio'] },
-        'UID_ANNA':        { 'ruolo': 'utente', 'profili': ['anna'] },
-        'UID_STUDIO':      { 'ruolo': 'utente', 'profili': ['studio'] }
+        'LxKk2zkSD1heVCM0JVIRx0toVI43': { 'ruolo': 'admin',  'profili': ['anna', 'studio'] },
+        'fgbnQ8kXCrVSnki85QheihUPW5C3':        { 'ruolo': 'utente', 'profili': ['anna'] },
+        'dQxYsv62HrSP3FMFKa1QewUne4i2':      { 'ruolo': 'utente', 'profili': ['studio'] }
       };
     }
     function abilitato() { return request.auth != null && request.auth.uid in utenti(); }

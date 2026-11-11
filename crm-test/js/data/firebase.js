@@ -68,6 +68,8 @@ export const backend = {
   async cambiaPassword(attuale, nuova) {
     return prova(async () => {
       const u = auth.currentUser;
+      // prima di toccare la password verifica che le regole del CRM siano pubblicate, altrimenti il cambio resterebbe a metà
+      try { await F.getDoc(F.doc(db, 'crm_utenti', u.uid)); } catch (e) { throw new Error('Le regole di sicurezza del CRM non sono ancora state pubblicate nella console Firebase: la password non è stata cambiata.'); }
       await A.reauthenticateWithCredential(u, A.EmailAuthProvider.credential(u.email, attuale));
       await A.updatePassword(u, nuova);
       await F.setDoc(F.doc(db, 'crm_utenti', u.uid), { pwCambiata: true, quando: new Date().toISOString() });

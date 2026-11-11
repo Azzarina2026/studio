@@ -5,9 +5,9 @@
 
    Per aggiungere un utente: crearne l'account, poi aggiungere qui e nelle regole il suo UID. */
 export const UTENTI = {
-  // 'UID_SUPER_ADMIN': { nome: 'Super admin', ruolo: 'admin', profili: ['anna', 'studio'] },
-  // 'UID_ANNA': { nome: 'Anna', ruolo: 'utente', profili: ['anna'] },
-  // 'UID_STUDIO': { nome: 'Studio Accogli', ruolo: 'utente', profili: ['studio'] },
+  'LxKk2zkSD1heVCM0JVIRx0toVI43': { nome: 'Super admin', ruolo: 'admin', profili: ['anna', 'studio'] },
+  'fgbnQ8kXCrVSnki85QheihUPW5C3': { nome: 'Anna', ruolo: 'utente', profili: ['anna'] },
+  'dQxYsv62HrSP3FMFKa1QewUne4i2': { nome: 'Studio Accogli', ruolo: 'utente', profili: ['studio'] },
 };
 
 /* Account finti usati solo con l'emulatore locale durante i collaudi. */
