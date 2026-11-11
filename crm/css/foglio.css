@@ -1,0 +1,47 @@
+/* Il foglio A4 del proforma: la stessa pagina serve da anteprima e da stampa/PDF.
+   Misure e caratteri ricalcano i modelli Word (Century Gothic 12 pt, margini del modello). */
+.foglio{--ft:"Century Gothic","URW Gothic","Avant Garde","Questrial","Jost","Figtree",sans-serif;
+  width:210mm;height:297mm;background:#fff;color:#000;position:relative;font:12pt/1.22 var(--ft);box-sizing:border-box;
+  padding:40mm 25mm 30mm 27.5mm;overflow:hidden;transform-origin:top left;box-shadow:0 10px 40px -12px rgba(0,0,0,.5)}
+.foglio *{box-sizing:border-box}
+.foglio p{margin:0}
+.foglio .f-testa{position:absolute;top:11mm;left:27.5mm;right:25mm}
+.foglio .f-testa img{position:absolute;left:3mm;top:0;width:13mm;height:auto}
+.foglio .f-titolo{text-align:right;font-size:14pt;padding-top:5.5mm}
+.foglio .f-titolo.grande{font-size:18pt;padding-top:5mm}
+.foglio .f-sotto{text-align:right;font-size:9pt;font-style:italic}
+.foglio .f-soci{font-size:9pt;font-style:italic}
+.foglio .f-linea{border-top:.5pt solid #000;margin:1.5mm 0 0 12mm}
+.foglio .f-dest{text-align:right}
+.foglio .f-dest i.sdi{color:#f00;font-weight:700}
+.foglio .f-num{margin-top:12pt}
+.foglio .f-descr{margin-top:22pt;text-align:justify}
+.foglio table.f-tab{width:100%;border-collapse:collapse;margin-top:16pt;font-size:11pt}
+.foglio .f-tab td{border:.5pt solid #000;padding:2.5pt 6pt;vertical-align:top}
+.foglio .f-tab td.imp{text-align:right;white-space:nowrap;width:34mm;font-variant-numeric:tabular-nums}
+.foglio .f-tab tr.sub td:first-child,.foglio .f-tab tr.tot td:first-child{text-align:right}
+.foglio .f-tab tr.calc td:first-child,.foglio .f-tab tr.meno td:first-child,.foglio .f-tab tr.antic td:first-child{padding-left:16pt}
+.foglio .f-tab tr.tot td{font-weight:700}
+.foglio .f-forf{margin-top:10pt;font-size:11pt;font-weight:700}
+.foglio .f-forf span{background:#ff0;padding:1pt 3pt}
+.foglio .f-dic{margin-top:6pt;font-size:9.5pt}
+.foglio .f-basso{position:absolute;left:27.5mm;right:25mm;bottom:52mm}
+.foglio .f-firma{margin-left:100mm;text-align:center;margin-bottom:16pt}
+.foglio .f-firma p:first-child{font-size:10pt}
+.foglio .f-avviso{text-align:center;color:#f00;font-weight:700;font-size:14pt;margin-bottom:12pt}
+.foglio .f-iban{text-align:center}
+.foglio .f-piede{position:absolute;left:20mm;right:20mm;bottom:12mm;text-align:center;font-size:9pt;line-height:1.25}
+.foglio [contenteditable]{outline:1px dashed transparent;border-radius:2px}
+.foglio [contenteditable]:hover{outline-color:#9db4ff}
+.foglio [contenteditable]:focus{outline:1.5px solid #3865ff;background:#f3f6ff}
+.foglio-cornice{overflow:hidden}
+
+#stampa{display:none}
+@media print{
+  @page{size:A4;margin:0}
+  html,body{background:#fff!important;min-height:0}
+  body>*:not(#stampa){display:none!important}
+  #stampa{display:block}
+  #stampa .foglio{box-shadow:none;transform:none!important;margin:0}
+  #stampa [contenteditable]{outline:0!important;background:none!important}
+}

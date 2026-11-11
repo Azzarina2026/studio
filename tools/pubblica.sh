@@ -6,5 +6,5 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -f crm-test/index.html ] || { echo "crm-test non trovato"; exit 1; }
 grep -q "^  // 'UID" crm-test/js/data/utenti.js && { echo "ATTENZIONE: in utenti.js non ci sono ancora gli account veri (vedi docs/ATTIVAZIONE.md)"; exit 1; }
-rsync -a --delete crm-test/ crm/
+mkdir -p crm && find crm -mindepth 1 -delete && cp -a crm-test/. crm/
 echo "Copiato crm-test → crm. Ora: git add crm && git commit && git push"
