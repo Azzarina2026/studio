@@ -104,6 +104,8 @@ async function eliminaCliente(c) {
   try {
     for (const [i, r] of ['incarichi', 'spese', 'proforma'].entries()) for (const x of legati[i]) await elimina(r, x.id);
     for (const d of [...(c.documenti || []), ...(c.aml || [])]) await eliminaFile(c.id, d.file);
+    // chi era collegato dall'app Pico Doc non deve più poter inviare documenti a una scheda che non esiste
+    try { if ((await pd.stato()).membro) for (const x of await pd.collegati(c.id)) await pd.scollega(x.id); } catch (e) { /* Pico Doc non attivo o non raggiungibile */ }
     await elimina('clienti', c.id); toast('Cliente eliminato'); vai('#/clienti');
   } catch (e) { errore(e); }
 }

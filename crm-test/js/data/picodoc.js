@@ -23,7 +23,7 @@ async function avvia() {
     try {
     const [app, a, f] = await Promise.all(['app', 'auth', 'firestore'].map(m => import(`${FB_SDK}firebase-${m}.js`)));
     A = a; F = f;
-    const istanza = app.initializeApp(PICODOC.config, 'picodoc');
+    const istanza = app.getApps().find(x => x.name === 'picodoc') || app.initializeApp(PICODOC.config, 'picodoc');
     auth = A.getAuth(istanza);
     await A.setPersistence(auth, A.browserSessionPersistence);     // chiudendo il browser si esce anche da Pico Doc
     db = F.getFirestore(istanza);
@@ -58,6 +58,13 @@ export const pd = {
   /* dopo aver aperto il link di conferma: rilegge l'account e rinnova il permesso con «email verificata» */
   ricarica: () => prova(async () => { await auth.currentUser?.reload(); await auth.currentUser?.getIdToken(true); }),
   esci: () => prova(() => A.signOut(auth)),
+  /* Quando si esce dal CRM si esce anche da Pico Doc, senza caricare nulla se non era stato usato. */
+  async esciConIlCrm() {
+    try {
+      if (avviato) { await avviato; if (auth.currentUser) await A.signOut(auth); }
+      Object.keys(sessionStorage).filter(k => k.startsWith('firebase:authUser:' + PICODOC.config.apiKey)).forEach(k => sessionStorage.removeItem(k));
+    } catch (e) { /* niente da chiudere */ }
+  },
 
   /* Attiva lo studio come destinatario (o aggiorna i tipi di documento accettati). */
   async attiva(tipi) {
@@ -89,7 +96,7 @@ export const pd = {
   async collegati(scheda) {
     return prova(async () => {
       const q = F.query(F.collection(db, 'collegamenti'), F.where('destinatario', '==', PICODOC.destinatario), F.where('scheda', '==', scheda));
-      return (await F.getDocs(q)).docs.map(d => ({ id: d.id, email: d.data().email, creato: d.data().creato?.toDate?.() }));
+      return (await F.getDocs(q)).docs.map(d => ({ id: d.id, utente: d.data().utente, email: d.data().email, creato: d.data().creato?.toDate?.() }));
     });
   },
   scollega: id => prova(() => F.deleteDoc(F.doc(db, 'collegamenti', id))),

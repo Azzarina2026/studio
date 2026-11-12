@@ -5,11 +5,12 @@ const S = process.argv[2];
 let ok = 0, ko = 0;
 const check = (n, c, x = '') => { c ? ok++ : ko++; console.log((c ? 'OK   ' : 'FAIL ') + n + (c ? '' : '  ' + x)); };
 (async () => {
-  const b = await chromium.launch();
+  const b = await chromium.launch(process.env.CHROME ? { executablePath: process.env.CHROME } : {});   // CHROME=/percorso/del/browser se Playwright non ha il suo
   const pg = await b.newPage({ viewport: { width: 1380, height: 900 } });
   const errs = []; pg.on('console', m => { if (m.type() === 'error') errs.push(m.text()); }); pg.on('pageerror', e => errs.push('PAGEERR ' + e.message));
   const U = 'http://localhost:8765/crm-test/';
-  await pg.goto(U); await pg.click('text=Entra come Studio Accogli'); await pg.waitForSelector('text=Primo');
+  // l'ambiente di prova apre sull'accesso rapido con PIN: qui si passa dall'accesso classico, per provare anche il cambio password
+  await pg.goto(U); await pg.click('text=Accedi con nome utente e password'); await pg.click('text=Entra come Studio Accogli'); await pg.waitForSelector('text=Primo');
   const i = await pg.$$('input[type=password]'); await i[0].fill('prova123'); await i[1].fill('NuovaPassword!2026'); await i[2].fill('NuovaPassword!2026');
   await pg.click('text=Imposta la nuova password'); await pg.waitForSelector('.guscio');
   check('utente Studio non vede la voce Super admin', !(await pg.$('nav >> text=Super admin')));
@@ -87,7 +88,7 @@ const check = (n, c, x = '') => { c ? ok++ : ko++; console.log((c ? 'OK   ' : 'F
   await pg.waitForTimeout(400);
   await pg.pdf({ path: S + '/proforma-studio.pdf', format: 'A4', printBackground: true });
   // admin: condivisione e duplicati; versione telefono
-  const tel = await b.newPage({ ...devices['iPhone 13'] }); await tel.goto(U); await tel.click('text=Entra come Anna'); await tel.waitForSelector('text=Primo');
+  const tel = await b.newPage({ ...devices['iPhone 13'] }); await tel.goto(U); await tel.click('text=Accedi con nome utente e password'); await tel.click('text=Entra come Anna'); await tel.waitForSelector('text=Primo');
   const j = await tel.$$('input[type=password]'); await j[0].fill('prova123'); await j[1].fill('NuovaPassword!2026'); await j[2].fill('NuovaPassword!2026'); await tel.click('text=Imposta la nuova password'); await tel.waitForSelector('.guscio'); await tel.waitForTimeout(500);
   await tel.screenshot({ path: S + '/21-telefono.png' });
   check('telefono: nessuno scorrimento orizzontale', await tel.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));

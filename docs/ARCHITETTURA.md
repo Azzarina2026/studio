@@ -85,7 +85,14 @@ I clienti scansionano i documenti con l'app **Pico Doc** (repository `Azzarina20
 - Scheda cliente → «Invita a Pico Doc»: codice di 8 caratteri, monouso, valido 14 giorni. Un utente dell'app
   può collegarsi a più schede (un codice per scheda) e una scheda può avere più utenti.
 - «Da Pico Doc»: documenti inviati dai clienti. «Porta nella scheda» li salva tra i documenti del cliente
-  (`fonte: 'app'`) e li cancella da Pico Doc; «Rifiuta» li cancella e basta.
+  (`fonte: 'app'`, `mittente` = utente dell'app) e li cancella da Pico Doc; «Rifiuta» li cancella e basta.
+  Ogni profilo vede solo gli arrivi dei propri clienti.
+- Sostituzione (`js/domain/picodoc.js`): il documento nuovo prende il posto di quello dello stesso tipo inviato
+  dallo **stesso** utente dell'app, o caricato a mano e intestato al cliente. I documenti inviati da altri utenti
+  non si toccano (due soci della stessa società restano distinti); nei casi dubbi il CRM chiede.
+- Chi ha le credenziali dell'account Pico Doc dello studio può leggere tutti i documenti in arrivo:
+  l'account va tenuto da chi può vedere tutti i clienti.
+- Uscendo dal CRM si esce anche da Pico Doc. Eliminando un cliente, gli utenti dell'app collegati vengono scollegati.
 - Regole di sicurezza: `firebase/firestore.rules` del repository picodoc (con prove automatiche).
 - La raccolta `crm_portale` resta chiusa e inutilizzata.
 

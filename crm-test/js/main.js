@@ -167,6 +167,7 @@ const sveglia = () => { clearTimeout(timer); if (S.sessione) timer = setTimeout(
 avvia(async (s, err) => {
   sveglia();
   if (!s && err?.code === 'regole-aperte') { app.replaceChildren(h('div.accesso', h('div.card', h('div.avviso.rosso', { role: 'alert' }, err.message)))); return; }
+  if (!s) import('./data/picodoc.js').then(m => m.pd.esciConIlCrm());     // fuori dal CRM, fuori anche da Pico Doc
   if (!s) return BACKEND === 'demo' ? schermataProva(err?.message) : schermataAccesso(err?.message);
   if (s.cambiaPassword) return schermataCambioPassword();
   if (err) { app.replaceChildren(h('div.accesso', h('div.card', h('div.avviso.rosso', 'Impossibile leggere i dati: ' + err.message), btn('Esci', () => be.esci())))); return; }
