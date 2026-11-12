@@ -1,12 +1,13 @@
 /* Elenco clienti e scheda cliente. */
 import { S, salva, elimina, admin, cliente, clientiDi, profilo, avvisa } from '../core/stato.js';
-import { h, icona, btn, chip, tabella, scheda, chiedi, conferma, toast, errore, conLink, vuoto } from '../core/ui.js';
+import { h, icona, btn, chip, tabella, scheda, chiedi, conferma, toast, errore, conLink, vuoto, finestra } from '../core/ui.js';
 import { norm, by, dmy, euro, today, uid, addMonths, daysBetween } from '../core/util.js';
 import { testata, vai } from '../main.js';
 import { PROFILI } from '../domain/profili.js';
 import { PERIODICITA, scadenze, importoAl } from '../domain/scadenze.js';
 import { residuoSpesa, addebitato, nuovaBozza, statoDi, STATI, etichettaNumero, dovuto } from '../domain/servizi.js';
 import { caricaFile, linkFile, eliminaFile } from '../core/allegati.js';
+import { pd } from '../data/picodoc.js';
 
 let filtro = '', mostraInattivi = false, linguetta = 'riepilogo';
 
@@ -103,6 +104,8 @@ async function eliminaCliente(c) {
   try {
     for (const [i, r] of ['incarichi', 'spese', 'proforma'].entries()) for (const x of legati[i]) await elimina(r, x.id);
     for (const d of [...(c.documenti || []), ...(c.aml || [])]) await eliminaFile(c.id, d.file);
+    // chi era collegato dall'app Pico Doc non deve più poter inviare documenti a una scheda che non esiste
+    try { if ((await pd.stato()).membro) for (const x of await pd.collegati(c.id)) await pd.scollega(x.id); } catch (e) { /* Pico Doc non attivo o non raggiungibile */ }
     await elimina('clienti', c.id); toast('Cliente eliminato'); vai('#/clienti');
   } catch (e) { errore(e); }
 }
@@ -112,7 +115,10 @@ function tabRiepilogo(c, p) {
   const aperti = S.proforma.filter(x => x.clienteId === c.id && x.profilo === p && ['emessa', 'parziale', 'scaduta'].includes(statoDi(x)));
   return h('div.pila',
     scheda('Anagrafica', h('dl.dati',
-      dato(`Codice ditta (${PROFILI[p].nome})`, c.stato?.[p]?.codice), dato('Tipo', c.tipo === 'persona' ? 'Persona fisica' : 'Azienda'),
+      dato(`Codice ditta (${PROFILI[p].nome})`, c.stato?.[p]?.codice),
+      // codice usato dall'altro profilo, solo se il cliente è in comune e il codice esiste
+      c.profili.filter(x => x !== p && c.stato?.[x]?.codice).map(x => dato(`Codice ditta usato da ${PROFILI[x].nome}`, c.stato[x].codice)),
+      dato('Tipo', c.tipo === 'persona' ? 'Persona fisica' : 'Azienda'),
       dato('Partita IVA', c.piva), dato('Codice fiscale', c.cf), dato('Codice univoco', c.sdi), dato('Referente', c.referente),
       dato('Sede legale', [c.sedeLegale?.via, c.sedeLegale?.citta].filter(Boolean).join(', ')),
       dato('Sede operativa', [c.sedeOperativa?.via, c.sedeOperativa?.citta].filter(Boolean).join(', ')),
@@ -121,7 +127,53 @@ function tabRiepilogo(c, p) {
     scheda('Da incassare', aperti.length
       ? tabella([{ t: 'Proforma', v: x => 'n° ' + etichettaNumero(x) }, { t: 'Data', v: x => dmy(x.data) }, { t: 'Stato', v: x => chip(...STATI[statoDi(x)]) }, { t: 'Importo', num: true, v: x => euro(dovuto(x)) }], aperti, { suRiga: x => vai('#/proforma/' + x.id) })
       : h('p.dim', { style: { margin: 0 } }, 'Nessun proforma in attesa di incasso.')),
-    scheda('Raccolta dati dal cliente (app)', h('p.testo', { style: { margin: 0 } }, 'In futuro il cliente potrà caricare da sé documenti e dati tramite l’app dello studio: arriveranno qui, in attesa di conferma. La scheda è già predisposta; il collegamento si attiverà con l’app.')));
+    schedaPicoDoc(c));
+}
+
+/* ---------- Pico Doc: invito del cliente e utenti collegati ---------- */
+function schedaPicoDoc(c) {
+  const corpo = h('div', h('p.dim', { style: { margin: 0 } }, 'Controllo Pico Doc…'));
+  const card = scheda('Documenti dal cliente (app Pico Doc)', corpo);
+  const ridisegna = async () => {
+    try {
+      const st = await pd.stato();
+      if (!st.utente || !st.membro) {
+        corpo.replaceChildren(h('p.testo', { style: { margin: 0 } }, 'Il cliente può scansionare i documenti con l’app Pico Doc e inviarli qui. Per attivarlo vai in ', h('a', { href: '#/impostazioni' }, 'Impostazioni'), ' → Pico Doc.'));
+        return;
+      }
+      const collegati = await pd.collegati(c.id);
+      corpo.replaceChildren(
+        h('p.testo', { style: { marginTop: 0 } }, collegati.length
+          ? 'Utenti dell’app collegati a questa scheda: i documenti che inviano arrivano in «Da Pico Doc».'
+          : 'Nessun utente collegato. Genera un codice e dallo al cliente: lo inserisce in Pico Doc → Impostazioni → Collegamenti.'),
+        collegati.length > 0 && tabella([
+          { t: 'Utente', v: x => h('span.princ', x.email || '—') },
+          { t: 'Collegato il', v: x => x.creato ? dmy(x.creato.toISOString().slice(0, 10)) : '—' },
+          { t: '', v: x => btn('Scollega', async () => {
+            if (!await conferma('Scollegare?', `${x.email} non potrà più inviare documenti a questa scheda.`, { ok: 'Scollega', pericolo: true })) return;
+            try { await pd.scollega(x.id); toast('Scollegato'); ridisegna(); } catch (e) { errore(e); }
+          }, { tipo: 'sm' }) }], collegati),
+        h('div.riga', { style: { marginTop: '12px' } }, btn('Invita a Pico Doc', () => invita(c), { tipo: 'primary', ic: 'piu' })));
+    } catch (e) {
+      corpo.replaceChildren(h('p.testo', { style: { margin: 0 } }, e.message));
+    }
+  };
+  ridisegna();
+  return card;
+}
+
+async function invita(c) {
+  try {
+    const { codice, scade } = await pd.creaInvito(c.id, c.nome);
+    const leggibile = codice.slice(0, 4) + ' ' + codice.slice(4);
+    const testo = `Ciao, per inviarci i documenti in modo sicuro scarica l’app Pico Doc, accedi e in Impostazioni → Collegamenti inserisci il codice ${codice}. Il codice vale fino al ${dmy(scade.toISOString().slice(0, 10))} e si usa una sola volta.`;
+    finestra({ titolo: 'Codice invito Pico Doc', corpo: [
+      h('p.testo', `Codice per «${c.nome}». Vale una sola volta, fino al ${dmy(scade.toISOString().slice(0, 10))}.`),
+      h('div', { style: { fontSize: '34px', fontWeight: '600', letterSpacing: '6px', textAlign: 'center', padding: '18px 0', fontFamily: 'ui-monospace, monospace' } }, leggibile),
+      h('p.dim', 'Lo stesso cliente può collegarsi a più schede (es. come privato e come società): genera un codice per ciascuna.')],
+      azioni: [ch => btn('Copia messaggio per il cliente', async () => { await navigator.clipboard.writeText(testo).catch(() => {}); toast('Messaggio copiato'); }, { ic: 'condividi' }),
+        ch => btn('Fatto', () => ch(), { tipo: 'primary' })] });
+  } catch (e) { errore(e); }
 }
 
 /* ---------- incarichi e compensi ---------- */

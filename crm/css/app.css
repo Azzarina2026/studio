@@ -171,6 +171,16 @@ dialog.dlg::backdrop{background:var(--scrim);backdrop-filter:blur(6px)}
 .accesso .btn.primary{justify-content:center;padding:11px}
 .accesso .rapidi{display:grid;gap:8px;padding-top:12px;border-top:1px solid var(--glass-line)}
 .accesso .rapidi .btn{justify-content:center}
+/* accesso rapido di prova */
+.accesso .pin-titolo{margin:4px 0 0;text-align:center;color:var(--fg-dim);font-size:14px}
+.accesso input.pin{font:600 30px var(--display);letter-spacing:.7em;text-indent:.7em;text-align:center;padding:12px;width:100%;box-sizing:border-box}
+.accesso .scelta-utente{display:grid;gap:10px}
+.accesso .utente-prova{display:grid;gap:3px;text-align:left;padding:14px 16px;border-radius:14px;border:1px solid var(--glass-line);background:var(--field);color:var(--fg);font:inherit;cursor:pointer}
+.accesso .utente-prova:hover,.accesso .utente-prova:focus-visible{background:var(--field-on);outline:2px solid var(--accent)}
+.accesso .utente-prova b{font:600 16px var(--display)}
+.accesso .utente-prova small{color:var(--fg-dim);font-size:12.5px}
+.accesso .link-piccolo{background:none;border:0;color:var(--fg-dim);font:inherit;font-size:13px;cursor:pointer;padding:4px;justify-self:center;text-decoration:underline}
+.accesso .link-piccolo.rosso{color:var(--danger)}
 .avviso{padding:10px 14px;border-radius:12px;background:var(--row);border:1px solid var(--glass-line);font-size:13.5px;line-height:1.5}
 .avviso.rosso{border-color:var(--danger)}
 .forza{height:5px;border-radius:3px;background:var(--field);overflow:hidden}
