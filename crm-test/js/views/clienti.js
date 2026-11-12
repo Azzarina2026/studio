@@ -112,7 +112,10 @@ function tabRiepilogo(c, p) {
   const aperti = S.proforma.filter(x => x.clienteId === c.id && x.profilo === p && ['emessa', 'parziale', 'scaduta'].includes(statoDi(x)));
   return h('div.pila',
     scheda('Anagrafica', h('dl.dati',
-      dato(`Codice ditta (${PROFILI[p].nome})`, c.stato?.[p]?.codice), dato('Tipo', c.tipo === 'persona' ? 'Persona fisica' : 'Azienda'),
+      dato(`Codice ditta (${PROFILI[p].nome})`, c.stato?.[p]?.codice),
+      // codice usato dall'altro profilo, solo se il cliente è in comune e il codice esiste
+      c.profili.filter(x => x !== p && c.stato?.[x]?.codice).map(x => dato(`Codice ditta usato da ${PROFILI[x].nome}`, c.stato[x].codice)),
+      dato('Tipo', c.tipo === 'persona' ? 'Persona fisica' : 'Azienda'),
       dato('Partita IVA', c.piva), dato('Codice fiscale', c.cf), dato('Codice univoco', c.sdi), dato('Referente', c.referente),
       dato('Sede legale', [c.sedeLegale?.via, c.sedeLegale?.citta].filter(Boolean).join(', ')),
       dato('Sede operativa', [c.sedeOperativa?.via, c.sedeOperativa?.citta].filter(Boolean).join(', ')),
