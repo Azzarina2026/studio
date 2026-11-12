@@ -11,6 +11,7 @@ const PAGINE = [
   { id: 'cruscotto', nome: 'Cruscotto', ic: 'casa', carica: () => import('./views/cruscotto.js') },
   { id: 'clienti', nome: 'Clienti', ic: 'persone', carica: () => import('./views/clienti.js') },
   { id: 'proforma', nome: 'Proforma', ic: 'doc', carica: () => import('./views/proforma.js') },
+  { id: 'arrivi', nome: 'Da Pico Doc', ic: 'graffetta', carica: () => import('./views/arrivi.js') },
   { id: 'scadenze', nome: 'Scadenze', ic: 'campana', carica: () => import('./views/scadenze.js'), badge: () => avvisi().filter(a => a.livello === 'rosso').length },
   { id: 'impostazioni', nome: 'Impostazioni', ic: 'ingranaggio', carica: () => import('./views/impostazioni.js') },
   { id: 'admin', nome: 'Super admin', ic: 'scudo', carica: () => import('./views/admin.js'), solo: admin },

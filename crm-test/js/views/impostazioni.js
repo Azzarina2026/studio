@@ -4,6 +4,8 @@ import { h, btn, chip, scheda, chiedi, toast, errore, tabella, icona } from '../
 import { clone, uid } from '../core/util.js';
 import { testata, campiPassword } from '../main.js';
 import { PROFILI } from '../domain/profili.js';
+import { PICODOC } from '../config.js';
+import { pd } from '../data/picodoc.js';
 
 const righe = { da: a => (a || []).join('\n'), a: s => String(s || '').split('\n').map(x => x.trim()).filter(Boolean) };
 const registra = (prof, msg = 'Impostazioni salvate') => salva('profili', prof).then(() => toast(msg)).catch(errore);
@@ -90,5 +92,58 @@ export function vista() {
       h('section.card.g12', h('h3.card-t', icona('chiave'), 'Accesso'),
         h('div.riga', h('span', `Collegato come ${S.sessione.nome} (${S.sessione.email})`), btn('Cambia password', password, { tipo: 'sm' })),
         be.totpInizia && h('div.riga', { style: { marginTop: '10px' } }, S.sessione.dueFattori ? chip('Verifica in due passaggi attiva', 'verde') : btn('Attiva la verifica in due passaggi (Authenticator)', dueFattori, { tipo: 'sm', ic: 'scudo' })),
-        h('p.dim', { style: { fontSize: '12.5px', margin: '12px 0 0' } }, 'La sessione si chiude da sola dopo 30 minuti di inattività e alla chiusura del browser.'))));
+        h('p.dim', { style: { fontSize: '12.5px', margin: '12px 0 0' } }, 'La sessione si chiude da sola dopo 30 minuti di inattività e alla chiusura del browser.')),
+      schedaPicoDoc()));
+}
+
+/* ---------- Pico Doc: account dello studio e tipi di documento accettati ---------- */
+function schedaPicoDoc() {
+  const corpo = h('div', h('p.dim', 'Controllo il collegamento con Pico Doc…'));
+  const card = h('section.card.g12', h('h3.card-t', icona('graffetta'), 'Pico Doc · documenti dai clienti'), corpo);
+  const ridisegna = () => disegna().catch(e => corpo.replaceChildren(h('p.testo', e.message), btn('Riprova', ridisegna, { tipo: 'sm' })));
+  const azione = f => async () => { try { await f(); await ridisegna(); } catch (e) { errore(e); } };
+  const credenziali = async (titolo, ok) => chiedi({ titolo, ok, campi: [
+    { k: 'email', label: 'Email', tipo: 'email', richiesto: true, auto: 'username' },
+    { k: 'pw', label: 'Password (almeno 8 caratteri)', tipo: 'password', richiesto: true, auto: titolo.startsWith('Crea') ? 'new-password' : 'current-password' }] });
+  const sceltaTipi = async (attuali = PICODOC.tipi.slice(0, 8).map(t => t[0])) => {
+    const valore = Object.fromEntries(PICODOC.tipi.map(([id]) => [id, attuali.includes(id)]));
+    const d = await chiedi({ titolo: 'Documenti che lo studio accetta', ok: 'Salva', valore, nota: 'I clienti potranno inviare dall’app solo questi tipi di documento.',
+      campi: PICODOC.tipi.map(([id, voce, nome]) => ({ k: id, label: nome || voce, tipo: 'spunta', w: 6 })) });
+    return d && PICODOC.tipi.map(t => t[0]).filter(id => d[id]);
+  };
+
+  async function disegna() {
+    const st = await pd.stato();
+    if (!st.utente) {
+      corpo.replaceChildren(
+        h('p.testo', 'Collega lo studio a Pico Doc: potrai invitare i clienti dalla loro scheda e ricevere i documenti che scansionano con l’app. Serve un account Pico Doc dello studio (email e password), diverso dall’accesso al CRM.'),
+        h('div.riga',
+          btn('Entra', azione(async () => { const d = await credenziali('Entra in Pico Doc', 'Entra'); if (d) await pd.entra(d.email, d.pw); }), { tipo: 'primary' }),
+          btn('Crea account', azione(async () => {
+            const d = await credenziali('Crea l’account Pico Doc dello studio', 'Crea');
+            if (d) { await pd.creaAccount(d.email, d.pw); toast('Account creato: conferma l’email dal link che ti abbiamo inviato'); }
+          }))));
+      return;
+    }
+    const righe = [h('div.riga', h('span', `Pico Doc: ${st.utente.email}`), btn('Esci da Pico Doc', azione(() => pd.esci()), { tipo: 'sm' }))];
+    if (!st.utente.verificata) {
+      righe.push(h('p.testo', 'Conferma l’indirizzo email dal link che ti abbiamo inviato, poi premi «Ho confermato».'),
+        h('div.riga', btn('Ho confermato', azione(() => pd.ricarica()), { tipo: 'sm.primary' }), btn('Invia di nuovo', azione(() => pd.inviaVerifica().then(() => toast('Email inviata'))), { tipo: 'sm' })));
+    } else if (!st.destinatario) {
+      righe.push(h('p.testo', `Ultimo passo: scegli quali documenti accettare e attiva «${PICODOC.nome}» come destinatario.`),
+        btn('Scegli i documenti e attiva', azione(async () => { const t = await sceltaTipi(); if (t) { await pd.attiva(t); toast('Pico Doc attivato'); } }), { tipo: 'primary' }));
+    } else if (!st.membro) {
+      righe.push(h('p.testo', `Il destinatario «${st.destinatario.nome}» esiste già ed è gestito da un altro account Pico Doc. Entra con quello.`));
+    } else {
+      const nomi = new Map(PICODOC.tipi.map(([id, voce, nome]) => [id, nome || voce]));
+      righe.push(
+        h('div.riga', chip('Attivo come «' + st.destinatario.nome + '»', 'verde')),
+        h('dl.dati', h('div', h('dt', 'Documenti accettati'), h('dd', (st.destinatario.tipi || []).map(t => nomi.get(t) || t).join(', ') || '—'))),
+        h('div.riga', btn('Modifica documenti accettati', azione(async () => { const t = await sceltaTipi(st.destinatario.tipi); if (t) { await pd.attiva(t); toast('Salvato'); } }), { tipo: 'sm', ic: 'matita' })),
+        h('p.dim', { style: { fontSize: '12.5px', margin: '12px 0 0' } }, 'Per invitare un cliente apri la sua scheda. I documenti inviati arrivano in «Da Pico Doc».'));
+    }
+    corpo.replaceChildren(...righe);
+  }
+  ridisegna();
+  return card;
 }

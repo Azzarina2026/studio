@@ -75,12 +75,19 @@ tools/collaudo/            collaudi automatici (regole e funzioni)
 Un cliente in comune è **una sola scheda** con `profili: ['anna','studio']`: anagrafica, documenti,
 antiriciclaggio e note sono condivisi; incarichi, compensi, spese e proforma restano separati.
 
-### Predisposizione per la futura app clienti
+### Collegamento con l'app Pico Doc
 
-- Ogni documento ha il campo `fonte` (`manuale` oggi, `app` domani).
-- Ogni cliente ha `portale: { abilitato }`.
-- La raccolta `crm_portale` è riservata ai caricamenti dei clienti: l'app scriverà lì (in attesa di
-  conferma) e il CRM li porterà nella scheda. Servirà aprire nelle regole solo quella raccolta.
+I clienti scansionano i documenti con l'app **Pico Doc** (repository `Azzarina2026/picodoc`), che ha un
+**progetto Firebase separato** («picodoc»): il database del CRM non viene mai aperto all'app.
+- Il CRM è un «destinatario» di Pico Doc (`js/data/picodoc.js`, chiavi in `PICODOC` di `js/config.js`).
+  Si attiva da Impostazioni → Pico Doc con un account Pico Doc dello studio (email e password).
+  Il CRM di prova usa il destinatario `studio-accogli-prova`, la produzione `studio-accogli`.
+- Scheda cliente → «Invita a Pico Doc»: codice di 8 caratteri, monouso, valido 14 giorni. Un utente dell'app
+  può collegarsi a più schede (un codice per scheda) e una scheda può avere più utenti.
+- «Da Pico Doc»: documenti inviati dai clienti. «Porta nella scheda» li salva tra i documenti del cliente
+  (`fonte: 'app'`) e li cancella da Pico Doc; «Rifiuta» li cancella e basta.
+- Regole di sicurezza: `firebase/firestore.rules` del repository picodoc (con prove automatiche).
+- La raccolta `crm_portale` resta chiusa e inutilizzata.
 
 ## Limiti noti del piano gratuito
 
