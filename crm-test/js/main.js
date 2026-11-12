@@ -38,16 +38,6 @@ function schermataAccesso(msg) {
   const pulsante = btn('Accedi', () => { const d = m.leggi(); if (d) entra(d.email, d.pw); }, { tipo: 'primary' });
   m.el.addEventListener('keydown', e => { if (e.key === 'Enter') pulsante.click(); });
   const rapidi = BACKEND === 'demo' ? import('./data/demo.js').then(({ ACCESSI_PROVA, backend }) => {
-    /* Solo in prova: basta il PIN (entra come super admin). In produzione questo blocco non esiste. */
-    const pin = h('input', { type: 'password', inputMode: 'numeric', maxLength: 4, autocomplete: 'off', placeholder: '• • • •', 'aria-label': 'PIN di prova',
-      style: { fontSize: '28px', letterSpacing: '12px', textAlign: 'center', width: '100%' } });
-    const provaPin = async () => {
-      try { await backend.entraConPin(pin.value); }
-      catch (e) { stato.hidden = false; stato.className = 'avviso rosso'; stato.textContent = e.message; pin.value = ''; pin.focus(); }
-    };
-    pin.addEventListener('input', () => { pin.value = pin.value.replace(/\D/g, ''); if (pin.value.length === 4) provaPin(); });
-    box.insertBefore(h('div.campo', { style: { margin: '6px 0 18px' } }, h('label', 'Accesso rapido di prova: PIN'), pin), stato);
-    setTimeout(() => pin.focus(), 30);
     box.append(h('div.rapidi', h('small.dim', 'Solo in prova: entra con un clic, oppure usa nome utente (es. anna@prova) e password «prova123».'),
       ACCESSI_PROVA.map(a => btn('Entra come ' + a.nome, () => backend.entraRapido(a.email))),
       btn('Azzera i dati di prova', () => { backend.azzera(); location.reload(); }, { tipo: 'danger' })));
@@ -57,7 +47,39 @@ function schermataAccesso(msg) {
     h('div.brand', h('div.mark', h('span', 'SA')), h('h1', 'Studio ', h('b', 'Accogli')), h('p', 'CRM · accesso riservato')),
     stato, m.el, pulsante);
   app.replaceChildren(provaBanner() || '', h('div.accesso', box));
-  if (BACKEND !== 'demo') m.el.querySelector('input').focus();
+  m.el.querySelector('input').focus();
+}
+
+/* ---------- accesso rapido, SOLO nell'ambiente di prova (dati finti) ----------
+   1) PIN  2) scelta dell'utente da simulare: si entra senza scrivere altro. */
+async function schermataProva(msg) {
+  const { ACCESSI_PROVA, backend } = await import('./data/demo.js');
+  const brand = h('div.brand', h('div.mark', h('span', 'SA')), h('h1', 'Studio ', h('b', 'Accogli')), h('p', 'CRM · ambiente di prova'));
+  const box = h('div.card');
+  const mostra = (...figli) => { box.replaceChildren(brand, ...figli); app.replaceChildren(provaBanner() || '', h('div.accesso', box)); };
+  const altro = h('button.link-piccolo', { type: 'button', onclick: () => schermataAccesso() }, 'Accedi con nome utente e password');
+
+  const stato = h('div.avviso.rosso', { hidden: !msg, role: 'alert' }, msg || '');
+  const pin = h('input.pin', { type: 'password', inputMode: 'numeric', maxLength: 4, autocomplete: 'off', 'aria-label': 'PIN di prova' });
+  pin.addEventListener('input', () => {
+    pin.value = pin.value.replace(/\D/g, '');
+    if (pin.value.length < 4) return;
+    if (backend.verificaPin(pin.value)) return sceltaUtente();
+    stato.hidden = false; stato.textContent = 'PIN non corretto.'; pin.value = '';
+  });
+  mostra(h('p.pin-titolo', 'Inserisci il PIN di prova'), pin, stato, altro);
+  setTimeout(() => pin.focus(), 30);
+
+  function sceltaUtente() {
+    const ruoli = { 'admin@prova': 'Vede Anna e Studio Accogli, gestisce le anagrafiche', 'anna@prova': 'Solo il profilo di Anna', 'studio@prova': 'Solo il profilo dello Studio (staff)' };
+    const ordine = ['admin@prova', 'anna@prova', 'studio@prova'];
+    mostra(h('p.pin-titolo', 'Con quale utente entri?'),
+      h('div.scelta-utente', [...ACCESSI_PROVA].sort((a, b) => ordine.indexOf(a.email) - ordine.indexOf(b.email)).map(a =>
+        h('button.utente-prova', { type: 'button', onclick: () => backend.entraSenzaPassword(a.email) }, h('b', a.nome), h('small', ruoli[a.email] || '')))),
+      h('div.riga', { style: { justifyContent: 'space-between' } },
+        h('button.link-piccolo', { type: 'button', onclick: () => schermataProva() }, 'Indietro'),
+        h('button.link-piccolo.rosso', { type: 'button', onclick: () => { backend.azzera(); location.reload(); } }, 'Azzera i dati di prova')));
+  }
 }
 
 const forzaPw = pw => (pw.length >= 12 ? 1 : 0) + (/[a-z]/.test(pw) && /[A-Z]/.test(pw) ? 1 : 0) + (/\d/.test(pw) ? 1 : 0) + (/[^A-Za-z0-9]/.test(pw) ? 1 : 0) + (pw.length >= 16 ? 1 : 0);
@@ -145,7 +167,7 @@ const sveglia = () => { clearTimeout(timer); if (S.sessione) timer = setTimeout(
 avvia(async (s, err) => {
   sveglia();
   if (!s && err?.code === 'regole-aperte') { app.replaceChildren(h('div.accesso', h('div.card', h('div.avviso.rosso', { role: 'alert' }, err.message)))); return; }
-  if (!s) return schermataAccesso(err?.message);
+  if (!s) return BACKEND === 'demo' ? schermataProva(err?.message) : schermataAccesso(err?.message);
   if (s.cambiaPassword) return schermataCambioPassword();
   if (err) { app.replaceChildren(h('div.accesso', h('div.card', h('div.avviso.rosso', 'Impossibile leggere i dati: ' + err.message), btn('Esci', () => be.esci())))); return; }
   try { const n = await generaBozze(); if (n) toast(n === 1 ? 'Creata 1 bozza di proforma in scadenza' : `Create ${n} bozze di proforma in scadenza`); } catch (e) { errore(e); }

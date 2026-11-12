@@ -38,11 +38,12 @@ export const backend = {
     ascolta(sessione = crea(email));
   },
   async entraRapido(email) { sessionStorage.setItem(KS, email); ascolta(sessione = crea(email)); },
-  /* Solo in prova: accesso con il PIN come super admin, senza il cambio della password temporanea. */
-  async entraConPin(pin) {
-    if (String(pin) !== PIN_PROVA) throw new Error('PIN non corretto.');
-    const email = Object.keys(UTENTI).find(e => UTENTI[e].ruolo === 'admin');
-    if (!db.pw[email]) { db.pw[email] = 'accesso-con-pin'; scrivi(); }
+  /* Solo in prova: PIN per l'accesso rapido, poi si sceglie l'utente da simulare senza password
+     e senza il cambio della password temporanea. */
+  verificaPin: pin => String(pin) === PIN_PROVA,
+  async entraSenzaPassword(email) {
+    if (!UTENTI[email]) throw new Error('Utente di prova inesistente.');
+    if (!db.pw[email]) { db.pw[email] = 'accesso-rapido'; scrivi(); }
     sessionStorage.setItem(KS, email); ascolta(sessione = crea(email));
   },
   async esci() { sessionStorage.removeItem(KS); ascolta(sessione = null); },
