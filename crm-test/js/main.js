@@ -38,6 +38,16 @@ function schermataAccesso(msg) {
   const pulsante = btn('Accedi', () => { const d = m.leggi(); if (d) entra(d.email, d.pw); }, { tipo: 'primary' });
   m.el.addEventListener('keydown', e => { if (e.key === 'Enter') pulsante.click(); });
   const rapidi = BACKEND === 'demo' ? import('./data/demo.js').then(({ ACCESSI_PROVA, backend }) => {
+    /* Solo in prova: basta il PIN (entra come super admin). In produzione questo blocco non esiste. */
+    const pin = h('input', { type: 'password', inputMode: 'numeric', maxLength: 4, autocomplete: 'off', placeholder: '• • • •', 'aria-label': 'PIN di prova',
+      style: { fontSize: '28px', letterSpacing: '12px', textAlign: 'center', width: '100%' } });
+    const provaPin = async () => {
+      try { await backend.entraConPin(pin.value); }
+      catch (e) { stato.hidden = false; stato.className = 'avviso rosso'; stato.textContent = e.message; pin.value = ''; pin.focus(); }
+    };
+    pin.addEventListener('input', () => { pin.value = pin.value.replace(/\D/g, ''); if (pin.value.length === 4) provaPin(); });
+    box.insertBefore(h('div.campo', { style: { margin: '6px 0 18px' } }, h('label', 'Accesso rapido di prova: PIN'), pin), stato);
+    setTimeout(() => pin.focus(), 30);
     box.append(h('div.rapidi', h('small.dim', 'Solo in prova: entra con un clic, oppure usa nome utente (es. anna@prova) e password «prova123».'),
       ACCESSI_PROVA.map(a => btn('Entra come ' + a.nome, () => backend.entraRapido(a.email))),
       btn('Azzera i dati di prova', () => { backend.azzera(); location.reload(); }, { tipo: 'danger' })));
@@ -47,7 +57,7 @@ function schermataAccesso(msg) {
     h('div.brand', h('div.mark', h('span', 'SA')), h('h1', 'Studio ', h('b', 'Accogli')), h('p', 'CRM · accesso riservato')),
     stato, m.el, pulsante);
   app.replaceChildren(provaBanner() || '', h('div.accesso', box));
-  m.el.querySelector('input').focus();
+  if (BACKEND !== 'demo') m.el.querySelector('input').focus();
 }
 
 const forzaPw = pw => (pw.length >= 12 ? 1 : 0) + (/[a-z]/.test(pw) && /[A-Z]/.test(pw) ? 1 : 0) + (/\d/.test(pw) ? 1 : 0) + (/[^A-Za-z0-9]/.test(pw) ? 1 : 0) + (pw.length >= 16 ? 1 : 0);

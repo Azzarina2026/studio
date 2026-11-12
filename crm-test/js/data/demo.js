@@ -12,6 +12,7 @@ const UTENTI = {
 };
 export const ACCESSI_PROVA = Object.keys(UTENTI).map(email => ({ email, nome: UTENTI[email].nome }));
 const PW_INIZIALE = 'prova123';
+const PIN_PROVA = '1990';     // accesso agevolato, SOLO nell'ambiente di prova (dati finti)
 
 let db, sessione = null, ascolta = () => {};
 const leggiDb = () => { try { return JSON.parse(localStorage.getItem(K)); } catch (e) { return null; } };
@@ -37,6 +38,13 @@ export const backend = {
     ascolta(sessione = crea(email));
   },
   async entraRapido(email) { sessionStorage.setItem(KS, email); ascolta(sessione = crea(email)); },
+  /* Solo in prova: accesso con il PIN come super admin, senza il cambio della password temporanea. */
+  async entraConPin(pin) {
+    if (String(pin) !== PIN_PROVA) throw new Error('PIN non corretto.');
+    const email = Object.keys(UTENTI).find(e => UTENTI[e].ruolo === 'admin');
+    if (!db.pw[email]) { db.pw[email] = 'accesso-con-pin'; scrivi(); }
+    sessionStorage.setItem(KS, email); ascolta(sessione = crea(email));
+  },
   async esci() { sessionStorage.removeItem(KS); ascolta(sessione = null); },
   async cambiaPassword(attuale, nuova) {
     await attesa();
