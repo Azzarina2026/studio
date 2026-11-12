@@ -76,7 +76,11 @@ export const backend = {
   async fileLeggi(clienteId, id) {
     const f = db.file[id];
     if (!f) throw new Error('Allegato non trovato.');
-    return await (await fetch(f.dati)).blob();
+    // decodifica diretta: la politica di sicurezza della pagina non permette fetch() di indirizzi «data:»
+    const [testa, base64] = f.dati.split(',');
+    const binario = atob(base64), byte = new Uint8Array(binario.length);
+    for (let i = 0; i < binario.length; i++) byte[i] = binario.charCodeAt(i);
+    return new Blob([byte], { type: testa.match(/^data:([^;,]+)/)?.[1] || f.tipo });
   },
   async fileElimina(clienteId, id) { delete db.file[id]; scrivi(); },
   azzera() { localStorage.removeItem(K); sessionStorage.removeItem(KS); },

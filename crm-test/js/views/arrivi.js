@@ -4,7 +4,7 @@ import { S, salva, cliente } from '../core/stato.js';
 import { h, btn, chip, scheda, tabella, conferma, toast, errore, scaricaBlob } from '../core/ui.js';
 import { dmy, today, uid, fileSize } from '../core/util.js';
 import { testata } from '../main.js';
-import { caricaFile } from '../core/allegati.js';
+import { caricaFile, eliminaFile } from '../core/allegati.js';
 import { PICODOC } from '../config.js';
 import { pd } from '../data/picodoc.js';
 
@@ -15,19 +15,33 @@ export function vista() {
   const corpo = h('div', h('p.dim', 'Controllo i documenti in arrivo…'));
   const ridisegna = () => disegna().catch(e => corpo.replaceChildren(scheda(null, h('p.testo', e.message), btn('Riprova', ridisegna, { tipo: 'sm' }))));
 
+  /* Documenti già in scheda che quello in arrivo aggiorna: stesso tipo e stessa persona
+     (stesso mittente dall'app, oppure intestato al cliente). Per «Altro» conta anche la descrizione. */
+  const daSostituire = (c, tipoCrm, descr, inv) => (c.documenti || []).filter(d => d.tipo === tipoCrm
+    && (tipoCrm !== 'Altro' || (d.numero || '') === descr)
+    && (d.mittente === inv.utente || d.intestatario === c.nome));
+
   async function porta(inv, c) {
     try {
+      const [, tipoCrm, nomeTipo] = voce(inv.tipo);
+      const descr = nomeTipo && tipoCrm === 'Altro' ? nomeTipo : '';
+      const vecchi = daSostituire(c, tipoCrm, descr, inv);
+      const recente = vecchi.map(d => d.scadenza || '').sort().pop() || '';
+      // Se in scheda c'è già un documento che scade dopo, quello arrivato è meno aggiornato: si chiede.
+      if (vecchi.length && inv.scadenza && recente && inv.scadenza < recente
+        && !await conferma('In scheda c’è un documento più recente', `Il documento in scheda scade il ${dmy(recente)}, quello arrivato il ${dmy(inv.scadenza)}. Sostituirlo comunque?`, { ok: 'Sostituisci' })) return;
       toast('Scarico il documento…');
       const blob = await pd.scarica(inv);
-      const [, tipoCrm, nomeTipo] = voce(inv.tipo);
       const file = new File([blob], `${inv.nome}.pdf`, { type: 'application/pdf' });
       const rif = await caricaFile(c.id, file);
       const documento = { id: uid(), ambito: IDENTITA.includes(inv.tipo) ? 'personale' : 'aziendale', tipo: tipoCrm,
-        intestatario: c.nome, numero: nomeTipo && tipoCrm === 'Altro' ? nomeTipo : '', rilascio: '', scadenza: inv.scadenza || '',
-        fonte: 'app', file: rif, aggiornato: today() };
-      await salva('clienti', { ...c, documenti: [...(c.documenti || []), documento] });
+        intestatario: c.nome, numero: descr, rilascio: '', scadenza: inv.scadenza || '',
+        fonte: 'app', mittente: inv.utente, file: rif, aggiornato: today() };
+      const restanti = (c.documenti || []).filter(d => !vecchi.includes(d));
+      await salva('clienti', { ...c, documenti: [...restanti, documento] });
+      for (const d of vecchi) await eliminaFile(c.id, d.file);
       await pd.cancella(inv);
-      toast(`Aggiunto ai documenti di ${c.nome}`);
+      toast(vecchi.length ? `Documento di ${c.nome} aggiornato: il precedente è stato sostituito` : `Aggiunto ai documenti di ${c.nome}`);
       ridisegna();
     } catch (e) { errore(e); }
   }
@@ -56,7 +70,7 @@ export function vista() {
         c && btn('Porta nella scheda', () => porta(x, c), { tipo: 'sm.primary', ic: 'ok' }),
         btn('Rifiuta', () => rifiuta(x), { tipo: 'sm', ic: 'cestino' })); } },
     ], arrivi, { vuoto: 'Nessun documento in arrivo.' })),
-    h('p.dim', { style: { fontSize: '12.5px' } }, 'I documenti restano su Pico Doc solo finché non li porti nella scheda o li rifiuti: poi vengono cancellati.'));
+    h('p.dim', { style: { fontSize: '12.5px' } }, 'I documenti restano su Pico Doc solo finché non li porti nella scheda o li rifiuti: poi vengono cancellati. Se in scheda c’è già lo stesso documento della stessa persona, quello nuovo lo sostituisce.'));
   }
   ridisegna();
   return h('div', testata('Da Pico Doc', btn('Aggiorna', ridisegna, { ic: 'freccia' })), corpo);

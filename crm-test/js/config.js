@@ -3,7 +3,7 @@
 
    /crm/       → PRODUZIONE: dati veri su Firebase, accesso con password.
    altrove     → PROVA: dati finti che restano solo nel browser di chi prova. */
-export const VERSIONE = '2026-11-12 · 4';
+export const VERSIONE = '2026-11-12 · 5';
 
 const percorso = location.pathname;
 export const AMBIENTE = /\/crm(\/|\/index\.html)?$/.test(percorso) ? 'produzione' : 'prova';
