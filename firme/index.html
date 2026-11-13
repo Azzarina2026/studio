@@ -74,7 +74,6 @@ const STUDIO = {
     {citta: 'Roma', indirizzo: 'Via Panama 96, 00198'}
   ],
   telefoni: ['+39 080 5576000', '+39 080 5573990'],
-  fax: '+39 080 9179062',
   staff: 'staff@studioaccogli.it'
 };
 const FIRME = [{
@@ -112,7 +111,7 @@ function completa(p){
     +   `<div style="font-family:${SERIF};font-size:17px;line-height:22px;color:${C.blu}">${esc(p.titolo)}</div>`
     +   `<div style="font-family:${SANS};font-size:10px;line-height:15px;letter-spacing:1px;text-transform:uppercase;color:${C.rosso};padding:0 0 6px 0">${esc(STUDIO.nome)}</div>`
     +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">${sedi}</div>`
-    +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">T ${STUDIO.telefoni.map(tel).join(' / ')}${sep}F ${esc(STUDIO.fax)}${sep}M ${tel(p.mobile)}</div>`
+    +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">T ${STUDIO.telefoni.map(tel).join(' / ')}${sep}M ${tel(p.mobile)}</div>`
     +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">${mail(p.email)}${sep}PEC ${mail(p.pec)}${sep}${mail(STUDIO.staff)}</div>`
     + `</td></tr>`
     + legale()
