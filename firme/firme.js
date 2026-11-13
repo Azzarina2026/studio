@@ -23,7 +23,7 @@ export const STUDIO = {
    automatica = false per escludere la persona dall'aggiornamento automatico. */
 export const FIRME = [{
   titolo: 'Dott.ssa Anna Maria Accogli',
-  firmaImg: SITO + '/firme/img/firma-anna-accogli.png', firmaW: 186, firmaH: 40, firmaAlt: 'Anna Maria Accogli',
+  firmaImg: SITO + '/firme/img/firma-anna-accogli.png', firmaW: 251, firmaH: 40, firmaAlt: 'Anna Maria Accogli',
   mobile: '+39 348 2238108',
   email: 'anna@studioaccogli.it',
   pec: 'annamaria.accogli@pec.commercialisti.it'
