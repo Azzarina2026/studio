@@ -1,0 +1,46 @@
+# Aggiorna da sola la firma Gmail di ogni persona dello studio quando cambiano le firme sul sito.
+# Configurazione una tantum (account di servizio Google + segreto GitHub): vedi docs/FIRME-GMAIL.md.
+name: Firme Gmail
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'firme/**'
+      - 'tools/firme-gmail.mjs'
+      - '.github/workflows/firme-gmail.yml'
+  workflow_dispatch:
+    inputs:
+      solo_prova:
+        description: 'Solo prova (non scrive niente in Gmail)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firme-gmail
+  cancel-in-progress: false
+
+jobs:
+  aggiorna:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Aggiorna le firme in Gmail
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          FIRMA_GMAIL: ${{ vars.FIRMA_GMAIL || 'completa' }}
+          SOLO_PROVA: ${{ inputs.solo_prova && '1' || '0' }}
+        run: node tools/firme-gmail.mjs
+      - name: Conserva le firme generate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firme-generate
+          path: ${{ runner.temp }}/firme-generate
+          if-no-files-found: ignore
