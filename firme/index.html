@@ -74,7 +74,6 @@ const STUDIO = {
     {citta: 'Roma', indirizzo: 'Via Panama 96, 00198'}
   ],
   telefoni: ['+39 080 5576000', '+39 080 5573990'],
-  fax: '+39 080 9179062',
   staff: 'staff@studioaccogli.it'
 };
 const FIRME = [{
@@ -87,8 +86,8 @@ const FIRME = [{
 
 /* ---- Stile (solo in linea, caratteri sicuri per tutte le caselle di posta) ---- */
 const C = {blu: '#1c2a5a', rosso: '#a3121b', testo: '#3a3f4b', tenue: '#8a8f9c'};
-const SANS = 'Arial,Helvetica,sans-serif';
-const SERIF = "Georgia,'Times New Roman',serif";
+/* Century Gothic: presente su Windows e Mac con Office; altrove ripiega su caratteri geometrici simili (Avenir Next, Futura) e poi Arial. */
+const SANS = "'Century Gothic',CenturyGothic,'Avenir Next',Futura,Arial,Helvetica,sans-serif";
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const tel = n => `<a href="tel:${n.replace(/\s/g,'')}" style="color:${C.testo};text-decoration:none">${esc(n)}</a>`;
 const mail = (m, pre='') => `<a href="mailto:${m}" style="color:${C.blu};text-decoration:none">${pre}${esc(m)}</a>`;
@@ -109,10 +108,10 @@ function completa(p){
     + `<tr>`
     + `<td valign="top" style="padding:3px 14px 0 0;vertical-align:top"><a href="${SITO}"><img src="${SITO}/firme/img/logo-studio.png" width="48" height="49" alt="Studio Accogli" style="display:block;border:0;width:48px;height:49px"></a></td>`
     + `<td valign="top" style="border-left:1px solid ${C.rosso};padding:0 0 0 14px;vertical-align:top">`
-    +   `<div style="font-family:${SERIF};font-size:17px;line-height:22px;color:${C.blu}">${esc(p.titolo)}</div>`
+    +   `<div style="font-family:${SANS};font-size:16px;line-height:22px;color:${C.blu}">${esc(p.titolo)}</div>`
     +   `<div style="font-family:${SANS};font-size:10px;line-height:15px;letter-spacing:1px;text-transform:uppercase;color:${C.rosso};padding:0 0 6px 0">${esc(STUDIO.nome)}</div>`
     +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">${sedi}</div>`
-    +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">T ${STUDIO.telefoni.map(tel).join(' / ')}${sep}F ${esc(STUDIO.fax)}${sep}M ${tel(p.mobile)}</div>`
+    +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">T ${STUDIO.telefoni.map(tel).join(' / ')}${sep}M ${tel(p.mobile)}</div>`
     +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">${mail(p.email)}${sep}PEC ${mail(p.pec)}${sep}${mail(STUDIO.staff)}</div>`
     + `</td></tr>`
     + legale()
@@ -122,7 +121,7 @@ function completa(p){
 function compatta(p){
   return `<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;font-family:${SANS};color:${C.testo}">`
     + `<tr><td colspan="2" style="border-left:1px solid ${C.rosso};padding:0 0 0 12px">`
-    +   `<div style="font-family:${SERIF};font-size:15px;line-height:20px;color:${C.blu}">${esc(p.titolo)}</div>`
+    +   `<div style="font-family:${SANS};font-size:14px;line-height:20px;color:${C.blu}">${esc(p.titolo)}</div>`
     +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">${esc(STUDIO.nome)}${sep}${STUDIO.sedi.map(s=>s.citta).join(' | ')}</div>`
     +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">T ${tel(STUDIO.telefoni[0])}${sep}M ${tel(p.mobile)}${sep}${mail(p.email)}</div>`
     + `</td></tr>`
