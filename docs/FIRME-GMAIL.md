@@ -38,6 +38,9 @@ Una persona = un oggetto in `FIRME` (`firme/firme.js`). `email` deve essere una 
 (un utente Workspace, non un gruppo). Se l'indirizzo è un alias di un altro account, aggiungi `gmail: 'account@studioaccogli.it'`.
 Per escludere qualcuno dall'automatismo: `automatica: false`.
 
+Per aggiornare una sola casella (o alcune): *Run workflow* e nel campo «Solo questi indirizzi» scrivi
+per esempio `lucia@studioaccogli.it` (più indirizzi separati da virgola). Lasciato vuoto, aggiorna tutti.
+
 ## Prova
 
 GitHub → *Actions → Firme Gmail → Run workflow*: prima con «Solo prova» spuntato (non scrive nulla), poi senza.

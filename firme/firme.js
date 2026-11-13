@@ -9,7 +9,7 @@ export const NOTE_LEGALI = SITO + '/note-legali/';
 export const STUDIO = {
   nome: 'Studio dr Anna Maria Accogli e Associati',
   sedi: [
-    {citta: 'Bari', indirizzo: 'Via Abate Gimma 3B, 70122'},
+    {citta: 'Bari', indirizzo: 'Via Abate Gimma 3B, 70121'},
     {citta: 'Roma', indirizzo: 'Via Panama 96, 00198'}
   ],
   telefoni: ['+39 080 5576000', '+39 080 5573990'],
@@ -17,15 +17,36 @@ export const STUDIO = {
 };
 
 /* email   = indirizzo mostrato nella firma e casella Gmail da aggiornare in automatico.
+   pec     = (facoltativo) indirizzo PEC.
+   altre   = (facoltativo) altri indirizzi da mostrare dopo il primo.
+   sedi    = (facoltativo) sedi da mostrare al posto di quelle dello studio.
    gmail   = (facoltativo) account Google della persona, se diverso da email (per esempio quando
              email è un alias). La firma viene impostata sull'indirizzo «email» di quell'account.
    automatica = false per escludere la persona dall'aggiornamento automatico. */
+/* Firme di Staff e Lucia: solo la sede di Bari. */
+const SEDE_BARI = STUDIO.sedi[0];
+
 export const FIRME = [{
   titolo: 'Dott.ssa Anna Maria Accogli',
   firmaImg: SITO + '/firme/img/firma-anna-accogli.png', firmaW: 251, firmaH: 40, firmaAlt: 'Anna Maria Accogli',
   mobile: '+39 348 2238108',
   email: 'anna@studioaccogli.it',
-  pec: 'annamaria.accogli@pec.commercialisti.it'
+  pec: 'annamaria.accogli@pec.commercialisti.it',
+  altre: [STUDIO.staff]
+}, {
+  titolo: 'Staff Studio',
+  firmaImg: SITO + '/firme/img/firma-anna-accogli.png', firmaW: 251, firmaH: 40, firmaAlt: 'Anna Maria Accogli',
+  sedi: [SEDE_BARI],
+  mobile: '+39 348 2238108',
+  email: STUDIO.staff,
+  altre: ['anna@studioaccogli.it']
+}, {
+  titolo: 'Dott.ssa Lucia Lella',
+  firmaImg: SITO + '/firme/img/firma-lucia-lella.png', firmaW: 143, firmaH: 29, firmaAlt: 'Lucia Lella',
+  sedi: [SEDE_BARI],
+  mobile: '+39 339 6795937',
+  email: 'lucia@studioaccogli.it',
+  pec: 'lucia.lella@pec.it'
 }];
 
 /* ---- Stile (solo in linea, caratteri sicuri per tutte le caselle di posta) ---- */
@@ -35,6 +56,8 @@ export const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 const tel = n => `<a href="tel:${n.replace(/\s/g,'')}" style="color:${C.testo};text-decoration:none">${esc(n)}</a>`;
 const mail = (m, pre='') => `<a href="mailto:${m}" style="color:${C.blu};text-decoration:none">${pre}${esc(m)}</a>`;
 const sep = `<span style="color:${C.rosso}">&nbsp;·&nbsp;</span>`;
+const sediDi = p => p.sedi || STUDIO.sedi;
+const indirizzi = p => [mail(p.email), ...(p.pec ? ['PEC ' + mail(p.pec)] : []), ...(p.altre || []).map(m => mail(m))].join(sep);
 
 function legale(){
   return `<tr><td colspan="2" style="padding:12px 0 0 0;font-family:${SANS};font-size:10px;line-height:14px;color:${C.tenue}">`
@@ -45,7 +68,7 @@ function legale(){
 }
 
 export function completa(p){
-  const sedi = STUDIO.sedi.map(s => `<b style="color:${C.blu};font-weight:bold">${s.citta}</b> ${esc(s.indirizzo)}`).join(sep);
+  const sedi = sediDi(p).map(s => `<b style="color:${C.blu};font-weight:bold">${s.citta}</b> ${esc(s.indirizzo)}`).join(sep);
   return `<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;font-family:${SANS};color:${C.testo}">`
     + `<tr><td colspan="2" style="padding:0 0 8px 0"><img src="${p.firmaImg}" width="${p.firmaW}" height="${p.firmaH}" alt="${esc(p.firmaAlt)}" style="display:block;border:0;width:${p.firmaW}px;height:${p.firmaH}px"></td></tr>`
     + `<tr>`
@@ -55,7 +78,7 @@ export function completa(p){
     +   `<div style="font-family:${SANS};font-size:10px;line-height:15px;letter-spacing:1px;text-transform:uppercase;color:${C.rosso};padding:0 0 6px 0">${esc(STUDIO.nome)}</div>`
     +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">${sedi}</div>`
     +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">T ${STUDIO.telefoni.map(tel).join(' / ')}${sep}M ${tel(p.mobile)}</div>`
-    +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">${mail(p.email)}${sep}PEC ${mail(p.pec)}${sep}${mail(STUDIO.staff)}</div>`
+    +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">${indirizzi(p)}</div>`
     + `</td></tr>`
     + legale()
     + `</table>`;
@@ -65,7 +88,7 @@ export function compatta(p){
   return `<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;font-family:${SANS};color:${C.testo}">`
     + `<tr><td colspan="2" style="border-left:1px solid ${C.rosso};padding:0 0 0 12px">`
     +   `<div style="font-family:${SANS};font-size:14px;line-height:20px;color:${C.blu}">${esc(p.titolo)}</div>`
-    +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">${esc(STUDIO.nome)}${sep}${STUDIO.sedi.map(s=>s.citta).join(' | ')}</div>`
+    +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">${esc(STUDIO.nome)}${sep}${sediDi(p).map(s=>s.citta).join(' | ')}</div>`
     +   `<div style="font-family:${SANS};font-size:11px;line-height:17px;color:${C.testo}">T ${tel(STUDIO.telefoni[0])}${sep}M ${tel(p.mobile)}${sep}${mail(p.email)}</div>`
     + `</td></tr>`
     + legale()
