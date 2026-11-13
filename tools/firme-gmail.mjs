@@ -10,6 +10,7 @@
      GOOGLE_SERVICE_ACCOUNT_JSON  contenuto del file JSON della chiave (segreto GitHub)
      FIRMA_GMAIL                  "completa" (predefinita) o "compatta": quale versione impostare
      SOLO_PROVA=1                 non scrive niente in Gmail: mostra solo cosa farebbe
+     SOLO_INDIRIZZI               (facoltativo) aggiorna solo questi indirizzi, separati da virgola
 
    Uso locale per controllo:  SOLO_PROVA=1 node tools/firme-gmail.mjs */
 
@@ -27,7 +28,10 @@ const versione = (process.env.FIRMA_GMAIL || 'completa').trim().toLowerCase();
 const genera = {completa, compatta}[versione];
 if (!genera) { console.error(`FIRMA_GMAIL deve essere "completa" o "compatta", non "${versione}".`); process.exit(1); }
 
-const persone = FIRME.filter(p => p.automatica !== false);
+const solo = (process.env.SOLO_INDIRIZZI || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+const sconosciuti = solo.filter(x => !FIRME.some(p => p.email.toLowerCase() === x));
+if (sconosciuti.length) { console.error(`SOLO_INDIRIZZI: nessuna firma per ${sconosciuti.join(', ')}. Indirizzi disponibili: ${FIRME.map(p => p.email).join(', ')}.`); process.exit(1); }
+const persone = FIRME.filter(p => solo.length ? solo.includes(p.email.toLowerCase()) : p.automatica !== false);
 const chiaveJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 const prova = process.env.SOLO_PROVA === '1' || !chiaveJson;
 
