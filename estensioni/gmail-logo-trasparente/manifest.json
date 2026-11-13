@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Gmail: logo dello studio senza sfondo",
+  "description": "Toglie il riquadro bianco dietro il logo dello studio nell'intestazione di Gmail. Solo un foglio di stile: non legge e non invia nulla.",
+  "version": "1.0.0",
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "css": ["logo-trasparente.css"],
+      "run_at": "document_start"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+/*
+ * Toglie lo sfondo bianco dietro il logo dello studio (logo personalizzato di
+ * Google Workspace) nell'intestazione di Gmail. Non tocca nient'altro.
+ *
+ * I nomi delle classi di Google (gb_...) cambiano spesso, quindi gli elementi
+ * si riconoscono dall'indirizzo dell'immagine del logo: .../ac/images/logo.gif
+ *
+ * Struttura di Gmail al 13/11/2026:
+ *   div[role="button"]            pulsante dell'account (logo + foto profilo)
+ *     div > div > img             logo dello studio
+ *     div                         foto profilo
+ */
+
+/* il logo, i due contenitori che lo avvolgono e il pulsante che lo contiene */
+img[src*="/ac/images/logo.gif"],
+:has(> img[src*="/ac/images/logo.gif"]),
+:has(> * > img[src*="/ac/images/logo.gif"]),
+[role="button"]:has(img[src*="/ac/images/logo.gif"]),
+a:has(img[src*="/ac/images/logo.gif"]),
+/* eventuali riquadri disegnati con ::before / ::after sugli stessi elementi */
+:has(> img[src*="/ac/images/logo.gif"])::before,
+:has(> img[src*="/ac/images/logo.gif"])::after,
+:has(> * > img[src*="/ac/images/logo.gif"])::before,
+:has(> * > img[src*="/ac/images/logo.gif"])::after,
+[role="button"]:has(img[src*="/ac/images/logo.gif"])::before,
+[role="button"]:has(img[src*="/ac/images/logo.gif"])::after,
+a:has(img[src*="/ac/images/logo.gif"])::before,
+a:has(img[src*="/ac/images/logo.gif"])::after {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
