@@ -9,7 +9,7 @@ export const NOTE_LEGALI = SITO + '/note-legali/';
 export const STUDIO = {
   nome: 'Studio dr Anna Maria Accogli e Associati',
   sedi: [
-    {citta: 'Bari', indirizzo: 'Via Abate Gimma 3B, 70122'},
+    {citta: 'Bari', indirizzo: 'Via Abate Gimma 3B, 70121'},
     {citta: 'Roma', indirizzo: 'Via Panama 96, 00198'}
   ],
   telefoni: ['+39 080 5576000', '+39 080 5573990'],
@@ -23,8 +23,8 @@ export const STUDIO = {
    gmail   = (facoltativo) account Google della persona, se diverso da email (per esempio quando
              email è un alias). La firma viene impostata sull'indirizzo «email» di quell'account.
    automatica = false per escludere la persona dall'aggiornamento automatico. */
-/* Sede di Bari come indicata per le firme di Staff e Lucia (solo Bari, CAP 70121). */
-const SEDE_BARI = {citta: 'Bari', indirizzo: 'Via Abate Gimma 3B, 70121'};
+/* Firme di Staff e Lucia: solo la sede di Bari. */
+const SEDE_BARI = STUDIO.sedi[0];
 
 export const FIRME = [{
   titolo: 'Dott.ssa Anna Maria Accogli',
