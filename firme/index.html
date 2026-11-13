@@ -37,6 +37,26 @@ ol li{margin:6px 0}
 .nota{font-size:14px;color:var(--fg-dim)}
 kbd{font:inherit;font-size:13px;padding:1px 6px;border-radius:6px;border:1px solid var(--glass-line);background:var(--glass)}
 a{color:var(--accent)}
+/* Sezioni apribili: una per persona, più logo e istruzioni */
+details.gruppo{background:var(--glass);border:1px solid var(--glass-line);border-radius:20px;margin:0 0 14px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+details.gruppo>summary{list-style:none;cursor:pointer;padding:16px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:var(--display);font-weight:500;font-size:18px;border-radius:20px}
+details.gruppo>summary::-webkit-details-marker{display:none}
+details.gruppo>summary::after{content:"";flex:none;width:9px;height:9px;border-right:2px solid var(--fg-dim);border-bottom:2px solid var(--fg-dim);transform:rotate(45deg);transition:transform .2s;margin-right:4px}
+details.gruppo[open]>summary::after{transform:rotate(-135deg)}
+details.gruppo>summary:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+details.gruppo>summary small{display:block;font-family:var(--body);font-weight:400;font-size:13px;color:var(--fg-dim);margin-top:2px}
+.dentro{padding:0 22px 22px}
+.dentro h3{font-family:var(--display);font-weight:500;font-size:15px;margin:18px 0 2px}
+.dentro h3:first-child{margin-top:0}
+.dentro p.desc{margin:0 0 10px;color:var(--fg-dim);font-size:14px}
+.titolo-sez{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--fg-dim);margin:30px 4px 12px}
+.loghi{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin:0 0 6px}
+.logo-prova{border-radius:12px;overflow:hidden;border:1px solid var(--glass-line)}
+.logo-prova div{padding:16px;display:grid;place-items:center}
+.logo-prova .chiaro{background:#fff}.logo-prova .scuro{background:#1f1f1f}
+.logo-prova img{max-width:100%;height:auto;display:block}
+.logo-prova p{margin:0;padding:10px 14px;font-size:14px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){details.gruppo>summary::after{transition:none}}
 </style>
 </head>
 <body>
@@ -46,10 +66,39 @@ a{color:var(--accent)}
     <p class="sub">Studio Accogli &amp; Associati · Gmail</p>
   </header>
 
+  <p class="titolo-sez">Firme per persona</p>
   <div id="firme"></div>
 
-  <section class="card">
-    <h2>Come installarla in Gmail</h2>
+  <p class="titolo-sez">Logo e istruzioni</p>
+  <details class="gruppo" id="logo-gmail">
+    <summary><span>Logo per Gmail<small>Sostituisce il logo Google in alto a sinistra nella posta dello studio</small></span></summary>
+    <div class="dentro">
+      <p class="desc">Fondo trasparente e colori scelti per leggersi sia sul tema chiaro sia su quello scuro. Due versioni: scegli quella che preferisci e scaricala.</p>
+      <div class="loghi">
+        <div class="logo-prova">
+          <div class="chiaro"><img src="img/logo-gmail-corsivo.png" width="313" height="72" alt="Studio Accogli, by Guido (corsivo)"></div>
+          <div class="scuro"><img src="img/logo-gmail-corsivo.png" width="313" height="72" alt=""></div>
+          <p><b>Corsivo</b><a href="img/logo-gmail-corsivo.png" download="logo-gmail-studio-accogli-corsivo.png">Scarica PNG</a></p>
+        </div>
+        <div class="logo-prova">
+          <div class="chiaro"><img src="img/logo-gmail-lineare.png" width="293" height="72" alt="Studio Accogli, by Guido (lineare)"></div>
+          <div class="scuro"><img src="img/logo-gmail-lineare.png" width="293" height="72" alt=""></div>
+          <p><b>Lineare</b><a href="img/logo-gmail-lineare.png" download="logo-gmail-studio-accogli-lineare.png">Scarica PNG</a></p>
+        </div>
+      </div>
+      <h3>Come caricarlo</h3>
+      <ol>
+        <li>Entra in <b>admin.google.com</b> con l'account amministratore.</li>
+        <li>Vai su <b>Account</b>, poi <b>Impostazioni account</b>, poi <b>Personalizzazione</b>.</li>
+        <li>Scegli <b>Logo personalizzato</b>, carica il file scaricato e salva.</li>
+      </ol>
+      <p class="nota">Google accetta PNG o GIF fino a 320 × 132 pixel e 30 KB: i due file rispettano già questi limiti. Il nuovo logo può impiegare qualche ora (fino a qualche giorno) a comparire per tutti.</p>
+    </div>
+  </details>
+
+  <details class="gruppo">
+    <summary><span>Come installare la firma in Gmail<small>Passo passo, dal computer</small></span></summary>
+    <div class="dentro">
     <p class="nota">Le caselle collegate all'aggiornamento automatico ricevono la firma «Completa» da sole ogni volta che questa pagina cambia: non serve incollarla. Le istruzioni qui sotto servono per la versione «Compatta» o per chi non è ancora collegato.</p>
     <ol>
       <li>Su questa pagina premi <b>Copia firma</b> sotto la versione che vuoi.</li>
@@ -61,7 +110,8 @@ a{color:var(--accent)}
       <li>Scorri in fondo alla pagina e clicca <b>Salva modifiche</b>.</li>
     </ol>
     <p class="nota">Le immagini (firma in corsivo e logo) sono ospitate su www.studioaccogli.it: se nell'anteprima di Gmail appaiono come riquadri vuoti, la pagina non è ancora stata pubblicata sul sito. Su telefono la firma si imposta dall'app Gmail solo come testo semplice: conviene usare quella del computer, che vale anche per i messaggi inviati dall'app se nell'app la firma «mobile» è disattivata.</p>
-  </section>
+    </div>
+  </details>
 </main>
 
 <script type="module">
@@ -71,17 +121,20 @@ import {FIRME, esc, completa, compatta} from './firme.js';
 /* ---- Pagina ---- */
 const box = document.getElementById('firme');
 FIRME.forEach((p, i) => {
-  [['Completa', 'Per i nuovi messaggi: firma in corsivo, logo, sedi e tutti i recapiti.', completa(p)],
+  const gruppo = document.createElement('details');
+  gruppo.className = 'gruppo';
+  gruppo.open = i === 0;
+  let dentro = '';
+  [['Completa', 'Per i nuovi messaggi: firma in corsivo, logo, sede e tutti i recapiti.', completa(p)],
    ['Compatta', 'Per risposte e inoltri: tre righe, senza immagini.', compatta(p)]].forEach(([nome, desc, html], j) => {
     const id = `f${i}-${j}`;
-    const sez = document.createElement('section');
-    sez.className = 'card';
-    sez.innerHTML = `<h2>${esc(p.titolo)} · ${nome}</h2><p class="desc">${desc}</p>`
+    dentro += `<h3>${nome}</h3><p class="desc">${desc}</p>`
       + `<div class="mail" id="${id}">${html}</div>`
       + `<div class="azioni"><button data-copia="${id}">Copia firma</button>`
       + `<button class="sec" data-codice="${id}">Copia codice HTML</button><span class="esito" aria-live="polite"></span></div>`;
-    box.appendChild(sez);
   });
+  gruppo.innerHTML = `<summary><span>${esc(p.titolo)}<small>${esc(p.email)}</small></span></summary><div class="dentro">${dentro}</div>`;
+  box.appendChild(gruppo);
 });
 
 function esito(btn, testo){
